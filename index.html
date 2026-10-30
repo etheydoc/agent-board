@@ -57,7 +57,6 @@ h2 small{color:var(--muted);font-weight:400;font-size:13px}
 .need{border-left:5px solid var(--k)}
 .nhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .kind{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--k)}
-.need.answered{opacity:.6}
 .need .btn{min-height:36px;padding:0 10px;font-size:13px}
 .why{background:var(--badbg)}
 .mtag{background:var(--c);color:#fff;font-weight:700;font-size:12px;border-radius:6px;padding:2px 7px}
@@ -67,7 +66,6 @@ h2 small{color:var(--muted);font-weight:400;font-size:13px}
 pre{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--soft);border-radius:6px;padding:7px 8px;margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto}
 .btn{border:1px solid var(--line);background:var(--soft);border-radius:9px;padding:0 14px;min-height:44px;cursor:pointer;font-weight:600}
 .hint{color:var(--muted);font-size:12.5px}
-.sent{color:var(--ok);font-size:13px;font-weight:600}
 .lane{border-left:5px solid var(--c)}
 .lane.dim{opacity:.65}
 .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -182,7 +180,7 @@ const store = {
 let gist = location.hash.slice(1);
 if (gist) store.set("board.gist", gist); else gist = store.get("board.gist");
 let filter = store.get("board.filter");
-let data = {}, answers = [], owner = OWNER, fetchedAt = 0;
+let data = {}, owner = OWNER, fetchedAt = 0;
 
 async function load() {
   if (!gist) return render();
@@ -198,7 +196,7 @@ async function load() {
       }
     } else if (owner && (r.status === 403 || r.status === 429)) {  // rate-limited: the raw files still answer
       files = {};
-      for (const m of [...MACHINES.map(([k]) => k), "answers"]) {
+      for (const [m] of MACHINES) {
         const f = await fetch(`https://gist.githubusercontent.com/${owner}/${gist}/raw/${m}.json?t=${Date.now()}`);
         if (f.ok) files[m + ".json"] = await f.text();
       }
@@ -208,8 +206,7 @@ async function load() {
       if (!name.endsWith(".json")) continue;
       try {
         const d = JSON.parse(text);
-        if (name === "answers.json") answers = Array.isArray(d) ? d : [];
-        else if (d && d.lanes) next[d.machine || name.slice(0, -5)] = d;
+        if (d && d.lanes) next[d.machine || name.slice(0, -5)] = d;
       } catch {}
     }
     data = next; fetchedAt = now();
@@ -235,8 +232,7 @@ function allLanes() {
   return out;
 }
 
-// Everything that needs Cody, from every machine, with the why. An item Cody answered or dismissed (answers.json)
-// drops off once the lane has the answer.
+// Everything waiting on Cody, from every machine, with the why. An item drops off once the lane moves on.
 function needs() {
   const items = [];
   const add = (o) => items.push(o);
@@ -278,16 +274,9 @@ function needs() {
     }
   }
   const seenRound = new Set();
-  const closed = new Set(answers.map((a) => a.item));
-  const taken = new Set(allLanes().flatMap((l) => l.answered || []));
+  const order = ["parked", "round", "stuck", "offline", "check", "error", "open"];
   return items.filter((i) => i.kind !== "round" || (!seenRound.has(i.id) && seenRound.add(i.id)))
-    .map((i) => {
-      const a = answers.filter((x) => x.item === i.id).pop();
-      return {...i, answer: a, taken: a && taken.has(a.id)};
-    })
-    .filter((i) => !i.answer || (i.answer.kind !== "dismiss" && !i.taken))
-    .sort((a, b) => (!!a.answer - !!b.answer) || ["parked", "round", "stuck", "offline", "check", "error", "open"].indexOf(a.kind)
-      - ["parked", "round", "stuck", "offline", "check", "error", "open"].indexOf(b.kind));
+    .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
 }
 
 function render() {
@@ -298,8 +287,8 @@ function render() {
   $("stamp").textContent = fetchedAt ? "updated " + clock(fetchedAt) : "loading…";
   const lanes = allLanes();
   const list = needs();
-  const open = list.filter((i) => !i.answer).length;
-  $("needsSub").textContent = list.length ? `${open} open${list.length > open ? ` · ${list.length - open} answered by Cody, on the way` : ""}` : "";
+  const open = list.length;
+  $("needsSub").textContent = open ? `${open} waiting` : "";
   renderSummary(lanes, list, open);
   $("nav").innerHTML = [["machines-h", "Machines"], ["lanes-h", "Lanes", lanes.filter((l) => l.alive && !l.stale).length],
     ["rounds-h", "Rounds"], ["activity-h", "Activity"], ["needs-h", "For Cody", open, open > 0]]
@@ -314,7 +303,7 @@ function render() {
 function renderSummary(lanes, list, open) {
   const live = lanes.filter((l) => l.alive && !l.stale);
   const machines = new Set(live.map((l) => l.m)).size;
-  const urgent = list.filter((i) => !i.answer && i.kind !== "open").length;
+  const urgent = list.filter((i) => i.kind !== "open").length;
   const [k, icon, text] = urgent ? ["--bad", "⚠", `${urgent} thing${urgent > 1 ? "s are" : " is"} waiting on Cody. Give him a shout.`]
     : open ? ["--merge", "•", `All running. ${open} note${open > 1 ? "s" : ""} left for Cody, nothing urgent.`]
     : ["--ok", "✓", "All running smoothly."];
@@ -335,11 +324,9 @@ function needText(i) {
 }
 
 function needCard(i) {
-  const state = i.answer ? `<span class="sent">✓ Cody answered${i.taken ? "" : ", on its way"}</span>`
-    : `<button class="btn" data-copy="${esc(i.id)}">Copy for Cody</button>`;
-  return `<section class="card need${i.answer ? " answered" : ""}" style="--k:var(${KINDS[i.kind][1]});--c:${color(i.m)}">
+  return `<section class="card need" style="--k:var(${KINDS[i.kind][1]});--c:${color(i.m)}">
     <div class="nhead"><span class="mtag">${esc(label(i.m))}${i.lane ? " · " + esc(i.lane) : ""}</span><span class="kind">${KINDS[i.kind][0]}</span>
-      ${i.at ? `<span class="hint">${ago(i.at)} ago</span>` : ""}<span style="flex:1"></span>${state}</div>
+      ${i.at ? `<span class="hint">${ago(i.at)} ago</span>` : ""}<span style="flex:1"></span><button class="btn" data-copy="${esc(i.id)}">Copy for Cody</button></div>
     <div class="ntitle">${esc(i.title)}${i.meta ? ` <span class="jmeta">${esc(i.meta)}</span>` : ""}</div>
     ${i.why || i.brief ? `<details><summary>Details</summary>${i.why ? `<pre>${esc(i.why)}</pre>` : ""}${i.brief ? `<div class="brief">${esc(i.brief)}</div>` : ""}</details>` : ""}
   </section>`;
