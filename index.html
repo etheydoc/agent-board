@@ -95,6 +95,13 @@ ol li .k{flex:none;width:18px;text-align:center}
 ol li .t{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;width:62px;white-space:nowrap}
 ol li.cur{font-weight:600}
 .sub{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 2px;font-weight:700}
+.art{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.art figure{margin:0;padding:8px}
+.art img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:var(--soft);cursor:zoom-in}
+.art figure.wide{grid-column:1/-1}
+.art figure.wide img{aspect-ratio:auto;object-fit:contain;max-height:80vh;cursor:zoom-out}
+.art figcaption{margin-top:6px;font-size:13px}
+.art .mtag{background:var(--c)}
 .round .rh{display:flex;align-items:center;gap:8px}
 .round .rh b{flex:1}
 .ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
@@ -122,6 +129,9 @@ ol li.cur{font-weight:600}
   <nav id="nav"></nav>
   <div class="err" id="err" hidden></div>
   <a class="card summary" id="summary" href="#" data-go="needs-h"></a>
+
+  <h2 id="art-h">Art <small>the newest previews from the lanes</small></h2>
+  <div class="art" id="art"></div>
 
   <h2 id="machines-h">Machines</h2>
   <div class="grid" id="machines"></div>
@@ -157,6 +167,7 @@ const KINDS = {  // what each kind of item is
   offline: ["Machine offline", "--stop"],
 };
 const OWNER = "etheydoc";  // the gist's owner, for the raw files when the API is rate-limited
+const ART_GIST = "e581fbd5456c0f53221ecdfa70da843d";  // the art strip's thumbnails, one file per machine
 const STALE = 10 * 60;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -181,6 +192,26 @@ let gist = location.hash.slice(1);
 if (gist) store.set("board.gist", gist); else gist = store.get("board.gist");
 let filter = store.get("board.filter");
 let data = {}, owner = OWNER, fetchedAt = 0;
+const art = {};  // machine -> {v, items}: its art strip, fetched only when its snapshot names a new version
+
+async function loadArt() {
+  const want = Object.entries(data).filter(([m, d]) => d.art && art[m]?.v !== d.art);
+  for (const [m, d] of want) {
+    try {
+      const a = await (await fetch(`https://gist.githubusercontent.com/${OWNER}/${ART_GIST}/raw/${m}.json?v=${d.art}`)).json();
+      if (a.v === d.art) art[m] = a;  // an older copy from the cache is retried next refresh
+    } catch {}
+  }
+  if (want.length) renderArt();
+}
+
+function renderArt() {
+  const items = Object.entries(art).flatMap(([m, a]) => a.items.map((i) => ({...i, m}))).sort((a, b) => b.at - a.at);
+  $("art").innerHTML = items.slice(0, 12).map((i) => `<figure class="card" style="--c:${color(i.m)}">
+    <img src="${i.img}" alt="${esc(i.name)}" loading="lazy">
+    <figcaption><span class="mtag">${esc(i.lane)}</span> <span class="hint">${ago(i.at)} ago</span><div class="brief clamp">${esc(i.what)}</div></figcaption>
+  </figure>`).join("") || '<p class="card empty">No previews from the last two days yet.</p>';
+}
 
 async function load() {
   if (!gist) return render();
@@ -211,6 +242,7 @@ async function load() {
     }
     data = next; fetchedAt = now();
     $("err").hidden = true;
+    loadArt();
   } catch (e) {
     $("err").textContent = "Couldn't refresh (" + e.message + "). Showing the last view.";
     $("err").hidden = false;
@@ -290,10 +322,11 @@ function render() {
   const open = list.length;
   $("needsSub").textContent = open ? `${open} waiting` : "";
   renderSummary(lanes, list, open);
-  $("nav").innerHTML = [["machines-h", "Machines"], ["lanes-h", "Lanes", lanes.filter((l) => l.alive && !l.stale).length],
+  $("nav").innerHTML = [["art-h", "Art"], ["machines-h", "Machines"],["lanes-h", "Lanes", lanes.filter((l) => l.alive && !l.stale).length],
     ["rounds-h", "Rounds"], ["activity-h", "Activity"], ["needs-h", "For Cody", open, open > 0]]
     .map(([id, t, n, hot]) => `<a href="#" data-go="${id}">${t}${n !== undefined ? `<span class="n${hot ? " hot" : ""}">${n}</span>` : ""}</a>`).join("");
   renderNeeds(list);
+  if (!$("art").innerHTML) renderArt();  // otherwise only when a strip changes: the images stay decoded
   renderMachines(lanes);
   renderRounds();
   renderLanes(lanes);
@@ -439,6 +472,8 @@ document.addEventListener("click", async (e) => {
   if (go) { e.preventDefault(); $(go.dataset.go).scrollIntoView({behavior: "smooth"}); return; }
   const chip = e.target.closest("[data-m]");
   if (chip) { filter = filter === chip.dataset.m ? "" : chip.dataset.m; store.set("board.filter", filter); render(); return; }
+  const pic = e.target.closest(".art img");
+  if (pic) { pic.closest("figure").classList.toggle("wide"); return; }
   const clamp = e.target.closest(".clamp");
   if (clamp) { clamp.classList.remove("clamp"); return; }
   const copy = e.target.closest("[data-copy]");
