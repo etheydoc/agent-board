@@ -8,45 +8,73 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1115">
-<title>Agent Board</title>
+<title>Control Centre</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1115'/%3E%3Ccircle cx='9' cy='16' r='4' fill='%233b82f6'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23a855f7'/%3E%3Ccircle cx='23' cy='16' r='4' fill='%234ade80'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#f5f6f8;--card:#fff;--ink:#14161a;--muted:#646b76;--line:#e3e6eb;--soft:#eef0f3;
   --pc1:#2563eb;--pc2:#9333ea;--mac:#16a34a;--other:#64748b;
-  --run:#16a34a;--merge:#0891b2;--limit:#d97706;--wait:#ca8a04;--pause:#64748b;--stop:#9ca3af;--bad:#dc2626;
+  --run:#16a34a;--merge:#0891b2;--limit:#d97706;--wait:#ca8a04;--pause:#64748b;--stop:#9ca3af;--bad:#dc2626;--ok:#16a34a;
+  --badbg:#fef2f2;--warnbg:#fffbeb;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1115;--card:#171a20;--ink:#e8eaee;--muted:#8b93a1;--line:#262a33;--soft:#1f232b;
   --pc1:#60a5fa;--pc2:#c084fc;--mac:#86efac;--other:#94a3b8;
-  --run:#4ade80;--merge:#22d3ee;--limit:#fbbf24;--wait:#facc15;--pause:#94a3b8;--stop:#6b7280;--bad:#f87171;
+  --run:#4ade80;--merge:#22d3ee;--limit:#fbbf24;--wait:#facc15;--pause:#94a3b8;--stop:#6b7280;--bad:#f87171;--ok:#4ade80;
+  --badbg:#2a1517;--warnbg:#2a2312;
 }}
 :root[data-theme="dark"]{
   --bg:#0f1115;--card:#171a20;--ink:#e8eaee;--muted:#8b93a1;--line:#262a33;--soft:#1f232b;
   --pc1:#60a5fa;--pc2:#c084fc;--mac:#86efac;--other:#94a3b8;
-  --run:#4ade80;--merge:#22d3ee;--limit:#fbbf24;--wait:#facc15;--pause:#94a3b8;--stop:#6b7280;--bad:#f87171;
+  --run:#4ade80;--merge:#22d3ee;--limit:#fbbf24;--wait:#facc15;--pause:#94a3b8;--stop:#6b7280;--bad:#f87171;--ok:#4ade80;
+  --badbg:#2a1517;--warnbg:#2a2312;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
-main{max-width:860px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px 40px}
-header{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:1180px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px 48px}
+header{display:flex;align-items:center;gap:8px;margin:4px 0 12px}
 h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
 .stamp{color:var(--muted);font-size:13px}
 button{font:inherit;color:inherit}
-.icon{background:var(--card);border:1px solid var(--line);border-radius:10px;width:40px;height:40px;cursor:pointer}
-.machines{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-.mchip{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:left;cursor:pointer;min-height:58px;border-top:4px solid var(--c)}
-.mchip.on{outline:2px solid var(--c);outline-offset:-1px}
-.mchip b{display:block;font-size:14px}
-.mchip span{color:var(--muted);font-size:12.5px}
-.summary{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:13.5px;margin:0 2px 12px}
-.summary b{color:var(--ink)}
-.lane{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:12px;padding:12px 12px 10px;margin-bottom:10px}
-.lane.dim{opacity:.62}
+.icon{background:var(--card);border:1px solid var(--line);border-radius:10px;min-width:44px;height:44px;cursor:pointer}
+nav{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px;padding-bottom:2px;position:sticky;top:0;background:var(--bg);z-index:5;padding-top:6px}
+nav a{flex:none;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:13.5px;font-weight:600}
+nav a .n{display:inline-block;min-width:20px;text-align:center;border-radius:999px;background:var(--soft);margin-left:4px;padding:0 5px;font-size:12px}
+nav a .n.hot{background:var(--bad);color:#fff}
+h2{font-size:16px;margin:26px 2px 10px;display:flex;align-items:baseline;gap:8px;scroll-margin-top:64px}
+h2 small{color:var(--muted);font-weight:400;font-size:13px}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+@media (max-width:420px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.mcard{border-top:4px solid var(--c)}
+.mhead{display:flex;align-items:center;gap:8px}
+.mhead b{font-size:16px;flex:1}
+.mline{font-size:13.5px;padding:5px 0;border-top:1px solid var(--line);display:flex;gap:8px}
+.mline:first-of-type{border-top:0}
+.mline .who{font-weight:700;flex:none;width:30px}
+.mline .what{flex:1;min-width:0}
+.stats{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:13px;margin:6px 0 8px}
+.stats b{color:var(--ink)}
+.need{border-left:5px solid var(--k)}
+.need.answered{opacity:.6}
+.nhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kind{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--k)}
+.mtag{background:var(--c);color:#fff;font-weight:700;font-size:12px;border-radius:6px;padding:2px 7px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mtag{color:#0f1115}}
+:root[data-theme="dark"] .mtag{color:#0f1115}
+.ntitle{font-weight:650;margin:6px 0 4px}
+pre{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--soft);border-radius:6px;padding:7px 8px;margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto}
+.why{background:var(--badbg)}
+textarea{font:inherit;width:100%;min-height:72px;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical;margin-top:6px}
+.acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--soft);border-radius:9px;padding:0 14px;min-height:44px;cursor:pointer;font-weight:600}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:default}
+.hint{color:var(--muted);font-size:12.5px}
+.sent{color:var(--ok);font-size:13px;font-weight:600}
+.lane{border-left:5px solid var(--c)}
+.lane.dim{opacity:.65}
 .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.tag{background:var(--c);color:#fff;font-weight:700;font-size:12px;border-radius:6px;padding:2px 7px}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tag{color:#0f1115}}
-:root[data-theme="dark"] .tag{color:#0f1115}
 .ltitle{color:var(--muted);font-size:13px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--s);white-space:nowrap}
 .pill i{width:8px;height:8px;border-radius:50%;background:var(--s)}
@@ -56,45 +84,88 @@ button{font:inherit;color:inherit}
 .job{margin:8px 0 6px}
 .jid{font-weight:700}
 .jmeta{color:var(--muted);font-size:12.5px}
-.brief{margin-top:3px;font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.brief{margin-top:3px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
 .last{font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);background:var(--soft);border-radius:6px;padding:5px 7px;margin-top:6px;overflow-wrap:anywhere}
 .bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--muted)}
 .track{flex:1;height:6px;border-radius:3px;background:var(--soft);overflow:hidden;display:flex}
 .track .d{background:var(--c)}.track .p{background:var(--bad)}
-.more{background:none;border:0;color:var(--muted);font-size:12.5px;padding:8px 0 0;cursor:pointer}
 details{margin-top:6px}
-summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0;list-style:none}
+summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 0;list-style:none}
 summary::-webkit-details-marker{display:none}
-summary::before{content:"▸ "}details[open] summary::before{content:"▾ "}
+summary::before{content:"▸ "}details[open]>summary::before{content:"▾ "}
 ol{list-style:none;margin:4px 0 0;padding:0}
-ol li{display:flex;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:13px}
+ol li{display:flex;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:13px;min-width:0}
+ol li>span:last-child{min-width:0;overflow-wrap:anywhere}
 ol li .k{flex:none;width:18px;text-align:center}
 ol li .t{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;width:62px;white-space:nowrap}
 ol li.cur{font-weight:600}
-h2{font-size:15px;margin:22px 2px 8px}
-.feed{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:2px 12px}
+.sub{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 2px;font-weight:700}
+.round .rh{display:flex;align-items:center;gap:8px}
+.round .rh b{flex:1}
+.ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
+.rl{font-size:13px;padding:3px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
 .feed li{border-top:0;border-bottom:1px solid var(--line)}
 .feed li:last-child{border-bottom:0}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none;margin-top:6px}
-.empty,.note{color:var(--muted);text-align:center;padding:28px 10px}
+.empty,.note{color:var(--muted);text-align:center;padding:22px 10px}
 .err{color:var(--bad);font-size:13px;margin:0 2px 10px}
-input{font:inherit;width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);max-width:min(520px,calc(100vw - 32px));padding:16px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h3{margin:0 0 8px}
+dialog p,dialog li{font-size:14px}
+input{font:inherit;width:100%;min-height:44px;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:0 12px;min-height:36px;cursor:pointer;font-size:13px;font-weight:600}
+.chip.on{background:var(--c,var(--ink));color:var(--bg);border-color:transparent}
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>Agent Board</h1>
+    <h1>Control Centre</h1>
     <span class="stamp" id="stamp"></span>
+    <button class="icon" id="keyBtn" aria-label="Answering setup" title="Answering setup">🔑</button>
     <button class="icon" id="refresh" aria-label="Refresh">↻</button>
   </header>
-  <div class="machines" id="machines"></div>
-  <div class="summary" id="summary"></div>
+  <nav id="nav"></nav>
   <div class="err" id="err" hidden></div>
-  <div id="lanes"></div>
-  <h2>Latest activity</h2>
-  <ol class="feed" id="feed"></ol>
+
+  <h2 id="needs-h">Needs Cody <small id="needsSub"></small></h2>
+  <div id="needs"></div>
+
+  <h2 id="machines-h">Machines</h2>
+  <div class="grid" id="machines"></div>
+
+  <h2 id="rounds-h">Rounds <small>the merge lane's merges onto the main line</small></h2>
+  <div class="grid" id="rounds"></div>
+
+  <h2 id="lanes-h">Lanes</h2>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="lanes"></div>
+  <div id="quiet"></div>
+
+  <h2 id="activity-h">Activity</h2>
+  <div class="card"><ol class="feed" id="feed"></ol></div>
 </main>
+
+<dialog id="keyDlg">
+  <h3>Answer from the board</h3>
+  <p>Your answers go into the board's gist, which only your account can write. This needs a token from
+    <b>your</b> GitHub account (the one that owns the gist), with only the <b>gist</b> scope. It can't touch any repo.</p>
+  <ol style="padding-left:18px;list-style:decimal">
+    <li><a id="tokLink" target="_blank" rel="noopener">Make the token</a> (tick only “gist”; no expiry is simplest).</li>
+    <li>Paste it below. It stays in this browser only.</li>
+  </ol>
+  <input id="keyIn" type="password" autocomplete="off" placeholder="ghp_…">
+  <div class="acts">
+    <button class="btn pri" id="keySave">Save</button>
+    <button class="btn" id="keyClear">Forget it</button>
+    <button class="btn" id="keyClose">Close</button>
+    <span class="hint" id="keyMsg"></span>
+  </div>
+</dialog>
+
 <script>
 const MACHINES = [["pc1", "PC 1"], ["pc2", "PC 2"], ["mac", "Mac"]];
 const STATE = {
@@ -102,8 +173,16 @@ const STATE = {
   limit: ["Usage limit", "--limit", false], waiting: ["Waiting", "--wait", false], paused: ["Paused", "--pause", false],
   stopped: ["Stopped", "--stop", false], between: ["Next job", "--run", true],
 };
-const STALE = 10 * 60;  // a machine silent this long is shown offline
-const POLL = 75;  // seconds; GitHub allows 60 unauthenticated calls an hour, and unchanged answers are free
+const KINDS = {  // what each kind of item is, and what an answer to it does
+  parked: ["Parked", "--bad", "Your answer puts the job back in its lane's queue, with your answer added to its brief."],
+  open: ["For your eye", "--merge", "Your answer goes to the lane's next seat (and its planner) as your note."],
+  round: ["Round failed", "--bad", "Your answer goes to the merge lane's next seat as your note."],
+  check: ["Main line fails the check", "--limit", "Your answer goes to the lane's next seat as your note."],
+  error: ["Runner error", "--limit", "Your answer goes to the lane's next seat as your note."],
+  stuck: ["Lane stopped", "--limit", "Your answer goes to the lane's next seat as your note, once it runs again."],
+  offline: ["Machine offline", "--stop", ""],
+};
+const STALE = 10 * 60;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 const color = (m) => MACHINES.some(([k]) => k === m) ? `var(--${m})` : "var(--other)";
@@ -118,25 +197,34 @@ function ago(t) {
   return Math.floor(s / 86400) + "d";
 }
 const clock = (t) => new Date(t * 1000).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+const store = {
+  get: (k, d = "") => { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} },
+};
 
 let gist = location.hash.slice(1);
-try { if (gist) localStorage.setItem("board.gist", gist); else gist = localStorage.getItem("board.gist") || ""; } catch {}
-let filter = "";
-try { filter = localStorage.getItem("board.filter") || ""; } catch {}
-let data = {}, owner = "", fetchedAt = 0;
+if (gist) store.set("board.gist", gist); else gist = store.get("board.gist");
+let filter = store.get("board.filter");
+let key = store.get("board.key");
+let data = {}, answers = [], owner = "", fetchedAt = 0;
+const drafts = {};  // item id -> text being typed, kept across re-renders
 
 async function load() {
-  if (!gist) return;
+  if (!gist) return render();
   try {
     let files;
-    const r = await fetch("https://api.github.com/gists/" + gist, {cache: "no-cache"});
+    const headers = key ? {Authorization: "token " + key} : {};
+    const r = await fetch("https://api.github.com/gists/" + gist, {cache: "no-cache", headers});
     if (r.ok) {
       const g = await r.json();
       owner = g.owner?.login || owner;
-      files = Object.fromEntries(Object.entries(g.files).map(([n, f]) => [n, f.content]));
+      files = {};
+      for (const [n, f] of Object.entries(g.files)) {
+        files[n] = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+      }
     } else if (owner && (r.status === 403 || r.status === 429)) {  // rate-limited: the raw files still answer
       files = {};
-      for (const [m] of MACHINES) {
+      for (const m of [...MACHINES.map(([k]) => k), "answers"]) {
         const f = await fetch(`https://gist.githubusercontent.com/${owner}/${gist}/raw/${m}.json?t=${Date.now()}`);
         if (f.ok) files[m + ".json"] = await f.text();
       }
@@ -144,7 +232,11 @@ async function load() {
     const next = {};
     for (const [name, text] of Object.entries(files)) {
       if (!name.endsWith(".json")) continue;
-      try { const d = JSON.parse(text); if (d && d.lanes) next[d.machine || name.slice(0, -5)] = d; } catch {}
+      try {
+        const d = JSON.parse(text);
+        if (name === "answers.json") answers = Array.isArray(d) ? d : [];
+        else if (d && d.lanes) next[d.machine || name.slice(0, -5)] = d;
+      } catch {}
     }
     data = next; fetchedAt = now();
     $("err").hidden = true;
@@ -160,49 +252,182 @@ function laneState(l) {
   return STATE[l.state] ? l.state : "running";
 }
 
+function allLanes() {
+  const out = [];
+  for (const [m, d] of Object.entries(data)) {
+    const stale = now() - d.at > STALE;
+    for (const l of d.lanes) out.push({...l, m, stale});
+  }
+  return out;
+}
+
+// Everything that needs Cody, from every machine, with the why.
+function needs() {
+  const items = [];
+  const add = (o) => items.push(o);
+  for (const [m, d] of Object.entries(data)) {
+    const stale = now() - d.at > STALE;
+    if (stale && d.lanes.some((l) => l.alive)) {
+      add({id: `offline:${m}`, kind: "offline", m, title: `${label(m)} has been silent for ${ago(d.at)}`,
+           why: "Its lanes were running at its last report. It may be asleep, off the network, or its feed stopped.", at: d.at});
+    }
+    for (const l of d.lanes) {
+      const brief = (id) => (l.jobs || []).find((j) => j[1] === id)?.[4] || "";
+      for (const j of (l.jobs || []).filter((j) => j[0] === "!")) {
+        add({id: `parked:${l.lane}:${j[1]}`, kind: "parked", m, lane: l.lane, job: j[1], title: `${j[1]} parked`,
+             why: l.why?.[j[1]] || "", brief: j[4], meta: `${j[2]} · ${j[3]}`});
+      }
+      for (const o of l.open || []) {
+        add({id: `open:${l.lane}:${o.job}`, kind: "open", m, lane: l.lane, job: o.job, title: `${o.job}: calls left for you`,
+             why: o.text, brief: brief(o.job), meta: o.role});
+      }
+      for (const [t, text] of l.errors || []) {
+        add({id: `error:${l.lane}:${t}`, kind: "error", m, lane: l.lane, title: `${l.lane}'s runner hit an error`, why: text, at: t});
+      }
+      for (const [t, msg] of l.events || []) {
+        if (/starting point already fails the check/.test(msg) && t > now() - 12 * 3600) {
+          add({id: `check:${l.lane}:${t}`, kind: "check", m, lane: l.lane, title: "The main line already fails the check", why: msg, at: t});
+        }
+        const rf = msg.match(/^round (\d+): did not land/);
+        if (rf) {
+          const r = (d.rounds || []).find((x) => x.n === +rf[1]);
+          add({id: `round:${rf[1]}`, kind: "round", m, lane: l.lane, title: `Round ${rf[1]} did not land`,
+               why: r ? [...r.lines, r.tail].filter(Boolean).join("\n") : msg, at: t});
+        }
+      }
+      if (!l.alive && /could not merge|runner error|nothing left to plan/.test(l.last || "") && l.events?.length
+          && l.events[l.events.length - 1][0] > now() - 12 * 3600) {
+        add({id: `stuck:${l.lane}:${l.events[l.events.length - 1][0]}`, kind: "stuck", m, lane: l.lane,
+             title: `${l.lane} stopped on its own`, why: l.last, at: l.events[l.events.length - 1][0]});
+      }
+    }
+  }
+  const seenRound = new Set();
+  const closed = new Set(answers.map((a) => a.item));
+  const taken = new Set(allLanes().flatMap((l) => l.answered || []));
+  return items.filter((i) => i.kind !== "round" || (!seenRound.has(i.id) && seenRound.add(i.id)))
+    .map((i) => {
+      const a = answers.filter((x) => x.item === i.id).pop();
+      return {...i, answer: a, taken: a && taken.has(a.id)};
+    })
+    .filter((i) => !i.answer || (i.answer.kind !== "dismiss" && !i.taken))
+    .sort((a, b) => (!!a.answer - !!b.answer) || ["parked", "round", "stuck", "offline", "check", "error", "open"].indexOf(a.kind)
+      - ["parked", "round", "stuck", "offline", "check", "error", "open"].indexOf(b.kind));
+}
+
 function render() {
   if (!gist) {
-    $("lanes").innerHTML = '<p class="note">Open the board from its full link (the part after # is the feed). It is remembered after that.</p>';
+    $("needs").innerHTML = '<p class="note">Open the board from its full link (the part after # is the feed). It is remembered after that.</p>';
     return;
   }
   $("stamp").textContent = fetchedAt ? "updated " + clock(fetchedAt) : "loading…";
+  const lanes = allLanes();
+  const list = needs();
+  const open = list.filter((i) => !i.answer).length;
+  $("needsSub").textContent = list.length ? `${open} open${list.length > open ? ` · ${list.length - open} answered, on the way` : ""}` : "";
+  $("nav").innerHTML = [["needs-h", "Needs Cody", open, open > 0], ["machines-h", "Machines"], ["rounds-h", "Rounds"],
+    ["lanes-h", "Lanes", lanes.filter((l) => l.alive && !l.stale).length], ["activity-h", "Activity"]]
+    .map(([id, t, n, hot]) => `<a href="#" data-go="${id}">${t}${n !== undefined ? `<span class="n${hot ? " hot" : ""}">${n}</span>` : ""}</a>`).join("");
+  renderNeeds(list);
+  renderMachines(lanes);
+  renderRounds();
+  renderLanes(lanes);
+}
+
+function renderNeeds(list) {
+  const el = $("needs");
+  const focus = document.activeElement?.dataset?.item;
+  el.innerHTML = list.length ? `<div class="grid">${list.map(needCard).join("")}</div>`
+    : '<p class="card empty">Nothing needs you right now. Parked jobs, calls left for your eye, failed rounds and errors from every machine show up here.</p>';
+  if (focus) { const t = el.querySelector(`textarea[data-item="${CSS.escape(focus)}"]`); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+}
+
+function needCard(i) {
+  const [kname, kvar, does] = KINDS[i.kind];
+  const can = !!does && i.lane;
+  const state = i.answer ? `<div class="sent">✓ Sent ${ago(i.answer.at)} ago: “${esc(i.answer.text.slice(0, 140))}”. ${i.taken ? "The lane has it." : "Waiting for the lane to pick it up."}</div>` : "";
+  return `<section class="card need${i.answer ? " answered" : ""}" style="--k:var(${kvar});--c:${color(i.m)}">
+    <div class="nhead"><span class="mtag">${esc(label(i.m))}${i.lane ? " · " + esc(i.lane) : ""}</span><span class="kind">${kname}</span>
+      ${i.at ? `<span class="hint">${ago(i.at)} ago</span>` : ""}</div>
+    <div class="ntitle">${esc(i.title)}${i.meta ? ` <span class="jmeta">${esc(i.meta)}</span>` : ""}</div>
+    ${i.why ? `<div class="sub">${i.kind === "open" ? "What the seat left for you" : "Why"}</div><pre${i.kind === "open" ? "" : ' class="why"'}>${esc(i.why)}</pre>` : ""}
+    ${i.brief ? `<details><summary>The job's brief</summary><div class="brief">${esc(i.brief)}</div></details>` : ""}
+    ${state}
+    ${can && !i.answer ? `<textarea data-item="${esc(i.id)}" placeholder="Your answer or direction…">${esc(drafts[i.id] || "")}</textarea>
+      <div class="acts"><button class="btn pri" data-send="${esc(i.id)}">Send to ${esc(i.lane)}</button>
+      <button class="btn" data-dismiss="${esc(i.id)}">Dismiss</button></div><div class="hint" style="margin-top:6px">${esc(does)}</div>`
+      : !i.answer ? `<div class="acts"><button class="btn" data-dismiss="${esc(i.id)}">Dismiss</button></div>` : ""}
+  </section>`;
+}
+
+function renderMachines(lanes) {
   const keys = [...new Set([...MACHINES.map(([k]) => k), ...Object.keys(data)])];
-  $("machines").innerHTML = keys.filter((k) => MACHINES.some(([m]) => m === k) || data[k]).map((k) => {
+  $("machines").innerHTML = keys.map((k) => {
     const d = data[k];
-    let text = "no feed yet";
-    if (d) {
-      const live = d.lanes.filter((l) => l.alive).length;
-      text = now() - d.at > STALE ? "offline · " + ago(d.at) : live ? live + " lane" + (live > 1 ? "s" : "") + " running" : "idle";
-    }
-    return `<button class="mchip${filter === k ? " on" : ""}" style="--c:${color(k)}" data-m="${esc(k)}"><b>${esc(label(k))}</b><span>${esc(text)}</span></button>`;
-  }).join("");
-
-  const lanes = [];
-  for (const [m, d] of Object.entries(data)) {
+    if (!d) return `<section class="card mcard" style="--c:${color(k)}"><div class="mhead"><b>${esc(label(k))}</b><span class="hint">no feed yet</span></div>
+      <p class="hint">${k === "mac" ? "The Mac's feed starts with its next lane start once it has the main line, or now with <code>python3 scripts/status_push.py &amp;</code> in its checkout." : "Its feed starts with its next lane start once it has the main line."}</p></section>`;
     const stale = now() - d.at > STALE;
-    for (const l of d.lanes) lanes.push({...l, m, stale});
-  }
-  const shown = lanes.filter((l) => !filter || l.m === filter);
-  const count = (s) => shown.filter((l) => l.alive && !l.stale && laneState(l) === s).length;
-  const parked = shown.reduce((n, l) => n + l.parked, 0), done = shown.reduce((n, l) => n + l.done, 0);
-  $("summary").innerHTML = [
-    [count("running") + count("between"), "working"], [count("merging") + count("planning"), "merging or planning"],
-    [count("limit"), "at a usage limit"], [count("waiting") + count("paused"), "waiting"], [done, "jobs done"],
-    [parked, "parked"],
-  ].filter(([n], i) => n || i === 0).map(([n, t]) => `<span><b>${n}</b> ${t}</span>`).join("");
+    const mine = lanes.filter((l) => l.m === k);
+    const live = mine.filter((l) => l.alive);
+    const st = (s) => live.filter((l) => laneState(l) === s).length;
+    const done = mine.reduce((n, l) => n + l.done, 0), parked = mine.reduce((n, l) => n + l.parked, 0);
+    const ahead = mine.reduce((n, l) => n + (l.jobs || []).filter((j) => j[0] === " ").length, 0);
+    const lastEv = Math.max(0, ...mine.flatMap((l) => (l.events || []).map((e) => e[0])));
+    const status = stale ? `<span class="bad">offline · ${ago(d.at)}</span>` : live.length ? `${live.length} lane${live.length > 1 ? "s" : ""} running` : "idle";
+    const lines = live.map((l) => {
+      const s = laneState(l), j = l.job;
+      const what = s === "running" && j ? `<b>${esc(j.id)}</b> ${esc(j.role || "")} · ${ago(l.since)} — ${esc((j.brief || "").slice(0, 110))}${(j.brief || "").length > 110 ? "…" : ""}`
+        : `${STATE[s][0]}${l.last ? ": " + esc(l.last.slice(0, 110)) : ""}`;
+      return `<div class="mline"><span class="who">${esc(l.lane)}</span><span class="what">${what}</span></div>`;
+    }).join("");
+    return `<section class="card mcard" style="--c:${color(k)}">
+      <div class="mhead"><b>${esc(label(k))}</b><span class="hint">${status}</span></div>
+      <div class="stats"><span><b>${st("running") + st("between")}</b> working</span>${st("merging") + st("planning") ? `<span><b>${st("merging") + st("planning")}</b> merging/planning</span>` : ""}
+        ${st("limit") ? `<span><b>${st("limit")}</b> at a limit</span>` : ""}${st("waiting") + st("paused") ? `<span><b>${st("waiting") + st("paused")}</b> waiting</span>` : ""}
+        <span><b>${done}</b> done</span><span><b>${ahead}</b> queued</span>${parked ? `<span class="bad">${parked} parked</span>` : ""}
+        ${lastEv ? `<span>last news ${ago(lastEv)} ago</span>` : ""}</div>
+      ${lines || '<p class="hint" style="margin:0">No lane running.</p>'}
+    </section>`;
+  }).join("");
+}
 
+function renderRounds() {
+  const rs = [];
+  for (const [m, d] of Object.entries(data)) for (const r of d.rounds || []) rs.push({...r, m});
+  rs.sort((a, b) => b.at - a.at);
+  $("rounds").innerHTML = rs.slice(0, 4).map((r) => {
+    const get = (p) => r.lines.filter((l) => l.startsWith(p)).map((l) => l.slice(p.length + 1).trim());
+    const merged = get("merged")[0] || "";
+    const n = merged ? merged.split(",").length : 0;
+    const uploads = get("upload waiting");
+    return `<section class="card round" style="--c:${color(r.m)}">
+      <div class="rh"><b>Round ${r.n}</b><span class="${r.ok ? "ok" : "bad"}">${r.ok ? "landed" : "did not land"}</span><span class="hint">${ago(r.at)} ago</span></div>
+      <div class="stats"><span><b>${n}</b> branches merged</span><span><b>${r.folded}</b> notes folded</span></div>
+      ${["check.sh", "smoke", "sent back"].flatMap((p) => get(p).map((v) => `<div class="rl"><b>${esc(p)}</b> ${esc(v)}</div>`)).join("")}
+      ${uploads.length ? `<div class="rl"><b>uploads waiting</b> ${uploads.length}: ${esc(uploads.join(" · ").slice(0, 300))}</div>` : ""}
+      ${merged ? `<details><summary>Merged branches</summary><div class="hint">${esc(merged)}</div></details>` : ""}
+      ${r.tail ? `<details${r.ok ? "" : " open"}><summary>Log tail</summary><pre>${esc(r.tail)}</pre></details>` : ""}
+    </section>`;
+  }).join("") || '<p class="card empty">No rounds in the last three days.</p>';
+}
+
+function renderLanes(lanes) {
+  const present = [...new Set(lanes.map((l) => l.m))];
+  $("filters").innerHTML = [["", "All"], ...MACHINES.filter(([k]) => present.includes(k))]
+    .map(([k, t]) => `<button class="chip${filter === k ? " on" : ""}" style="${k ? `--c:${color(k)}` : ""}" data-m="${k}">${t}</button>`).join("");
+  const shown = lanes.filter((l) => !filter || l.m === filter);
   const rank = {running: 0, between: 0, merging: 1, planning: 1, limit: 2, waiting: 3, paused: 4, stopped: 5};
   shown.sort((a, b) => (a.stale - b.stale) || ((rank[laneState(a)] ?? 9) - (rank[laneState(b)] ?? 9)) || a.lane.localeCompare(b.lane));
   const active = shown.filter((l) => l.alive && !l.stale), quiet = shown.filter((l) => !(l.alive && !l.stale));
-  $("lanes").innerHTML = (active.length ? active.map(card).join("") : '<p class="empty">No lanes running right now.</p>')
-    + (quiet.length ? `<details${active.length ? "" : " open"}><summary>Stopped in the last 12 hours (${quiet.length})</summary>${quiet.map(card).join("")}</details>` : "");
+  $("lanes").innerHTML = active.length ? active.map(card).join("") : '<p class="card empty">No lanes running right now.</p>';
+  $("quiet").innerHTML = quiet.length ? `<details><summary>Stopped in the last 12 hours (${quiet.length})</summary><div class="grid">${quiet.map(card).join("")}</div></details>` : "";
 
   const feed = [];
   for (const l of shown) for (const [t, msg] of l.events || []) feed.push([t, l.m, l.lane, msg]);
   feed.sort((a, b) => b[0] - a[0]);
-  $("feed").innerHTML = feed.slice(0, 25).map(([t, m, lane, msg]) =>
+  $("feed").innerHTML = feed.slice(0, 40).map(([t, m, lane, msg]) =>
     `<li><span class="dot" style="--c:${color(m)}"></span><span class="t">${clock(t)}</span><span><b>${esc(lane)}</b> ${esc(msg)}</span></li>`
-  ).join("") || '<li class="empty">Nothing yet. Lanes started before the board log their messages from their next start.</li>';
+  ).join("") || '<li class="empty">Nothing yet.</li>';
 }
 
 function card(l) {
@@ -212,37 +437,101 @@ function card(l) {
   const j = l.job;
   const jobHtml = j && l.alive ? `<div class="job"><span class="jid">${esc(j.id)}</span>
     <span class="jmeta">${esc([j.role, j.effort].filter(Boolean).join(" · "))}${l.since && !j.finished ? " · for " + ago(l.since) : ""}${j.finished ? " · just finished" : ""}</span>
-    ${j.brief ? `<div class="brief">${esc(j.brief)}</div>` : ""}</div>` : "";
+    ${j.brief ? `<div class="brief clamp" title="Tap to expand">${esc(j.brief)}</div>` : ""}</div>` : "";
   const pct = (n) => l.total ? (100 * n / l.total).toFixed(1) + "%" : "0";
   const last = l.last && !(st === "running" && j && l.last.startsWith(j.id + " (")) ? `<div class="last">${esc(l.last)}</div>` : "";
-  const jobs = (l.jobs || []).map(([s, id, role, effort, brief]) => {
+  const jobs = l.jobs || [];
+  const row = ([s, id, role, effort, brief]) => {
     const cur = j && id === j.id && l.alive;
     const k = s === "x" ? "✓" : s === "!" ? "⚠" : cur ? "●" : "○";
-    return `<li class="${cur ? "cur" : ""}"><span class="k">${k}</span><span><b>${esc(id)}</b> <span class="jmeta">${esc(role)} · ${esc(effort)}</span><br>${esc(brief)}</span></li>`;
-  }).join("");
+    return `<li class="${cur ? "cur" : ""}"><span class="k">${k}</span><span><b>${esc(id)}</b> <span class="jmeta">${esc(role)} · ${esc(effort)}</span><br><span class="brief clamp">${esc(brief)}</span>${s === "!" && l.why?.[id] ? `<pre class="why">${esc(l.why[id])}</pre>` : ""}</span></li>`;
+  };
+  const next = jobs.filter((x) => x[0] === " " && !(j && x[1] === j.id && l.alive));
+  const done = jobs.filter((x) => x[0] !== " ").reverse();
   const events = (l.events || []).slice().reverse().map(([t, msg]) => `<li><span class="t">${clock(t)}</span><span>${esc(msg)}</span></li>`).join("");
-  return `<section class="lane${l.alive && !l.stale ? "" : " dim"}" style="--c:${color(l.m)}">
-    <div class="top"><span class="tag">${esc(l.lane)}</span><span class="ltitle">${esc(l.title.replace(/^Lane \w+:\s*/, ""))}</span>
+  return `<section class="card lane${l.alive && !l.stale ? "" : " dim"}" style="--c:${color(l.m)}">
+    <div class="top"><span class="mtag">${esc(l.lane)}</span><span class="ltitle">${esc(l.title.replace(/^Lane \w+:\s*/, ""))}</span>
       <span class="pill${live && !l.stale ? " live" : ""}" style="--s:var(${l.stale ? "--stop" : svar})"><i></i>${esc(stText)}</span></div>
     ${jobHtml}${last}
     <div class="bar"><div class="track"><span class="d" style="width:${pct(l.done)}"></span><span class="p" style="width:${pct(l.parked)}"></span></div>
       ${l.done}/${l.total}${l.parked ? ` · <span style="color:var(--bad)">${l.parked} parked</span>` : ""}${l.commit ? " · commit " + ago(l.commit[0]) + " ago" : ""}</div>
-    ${jobs || events ? `<details><summary>Queue and messages</summary>${jobs ? `<ol>${jobs}</ol>` : ""}${events ? `<ol>${events}</ol>` : ""}</details>` : ""}
+    ${next.length ? `<details${l.alive ? " open" : ""}><summary>Up next (${next.length})</summary><ol>${next.slice(0, 4).map(row).join("")}</ol>${next.length > 4 ? `<details><summary>${next.length - 4} more</summary><ol>${next.slice(4).map(row).join("")}</ol></details>` : ""}</details>` : ""}
+    ${done.length ? `<details><summary>Done and parked (${done.length})</summary><ol>${done.map(row).join("")}</ol></details>` : ""}
+    ${l.commit ? `<div class="hint" style="margin-top:6px">Last commit: ${esc(l.commit[1])}</div>` : ""}
+    ${events ? `<details><summary>Messages</summary><ol>${events}</ol></details>` : ""}
   </section>`;
 }
 
-$("machines").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-m]");
-  if (!b) return;
-  filter = filter === b.dataset.m ? "" : b.dataset.m;
-  try { localStorage.setItem("board.filter", filter); } catch {}
-  render();
+// ---- answering: the page writes answers.json in the gist; each machine's feed hands them to its lanes ----
+async function writeAnswer(item, kind, text) {
+  if (!key) { openKey(); return false; }
+  const i = needs().find((x) => x.id === item) || {id: item};
+  const headers = {Authorization: "token " + key, Accept: "application/vnd.github+json"};
+  const r = await fetch("https://api.github.com/gists/" + gist, {cache: "no-cache", headers});
+  if (!r.ok) throw new Error(r.status === 401 ? "the saved token was refused" : "GitHub answered " + r.status);
+  const g = await r.json();
+  let cur = [];
+  try { cur = JSON.parse(g.files["answers.json"]?.content || "[]"); } catch {}
+  const a = {id: item + "@" + Date.now(), item, kind, at: Math.floor(now()), m: i.m, lane: i.lane, job: i.job, text};
+  cur = [...cur, a].slice(-400);
+  const w = await fetch("https://api.github.com/gists/" + gist, {method: "PATCH", headers,
+    body: JSON.stringify({files: {"answers.json": {content: JSON.stringify(cur)}}})});
+  if (!w.ok) throw new Error(w.status === 404 || w.status === 403 ? "the token can't write this gist (is it from the gist owner's account, with the gist scope?)" : "GitHub answered " + w.status);
+  answers = cur;
+  return true;
+}
+
+document.addEventListener("input", (e) => { if (e.target.dataset.item) drafts[e.target.dataset.item] = e.target.value; });
+document.addEventListener("click", async (e) => {
+  const go = e.target.closest("[data-go]");
+  if (go) { e.preventDefault(); $(go.dataset.go).scrollIntoView({behavior: "smooth"}); return; }
+  const chip = e.target.closest("[data-m]");
+  if (chip) { filter = filter === chip.dataset.m ? "" : chip.dataset.m; store.set("board.filter", filter); render(); return; }
+  const clamp = e.target.closest(".clamp");
+  if (clamp) { clamp.classList.remove("clamp"); return; }
+  const send = e.target.closest("[data-send]"), dis = e.target.closest("[data-dismiss]");
+  if (!send && !dis) return;
+  const id = (send || dis).dataset.send || (send || dis).dataset.dismiss;
+  const text = send ? (drafts[id] || "").trim() : "";
+  if (send && !text) return;
+  const item = needs().find((x) => x.id === id);
+  (send || dis).disabled = true;
+  try {
+    if (await writeAnswer(id, send ? item.kind : "dismiss", text)) { delete drafts[id]; render(); }
+  } catch (err) {
+    $("err").textContent = "Couldn't send: " + err.message; $("err").hidden = false;
+  }
+  (send || dis).disabled = false;
 });
+
+function openKey() {
+  $("tokLink").href = "https://github.com/settings/tokens/new?scopes=gist&description=control-centre";
+  $("keyIn").value = ""; $("keyMsg").textContent = key ? "A token is saved." : "";
+  $("keyDlg").showModal();
+}
+$("keyBtn").addEventListener("click", openKey);
+$("keyClose").addEventListener("click", () => $("keyDlg").close());
+$("keyClear").addEventListener("click", () => { key = ""; store.set("board.key", ""); $("keyMsg").textContent = "Forgotten."; });
+$("keySave").addEventListener("click", async () => {
+  const k = $("keyIn").value.trim();
+  if (!k) return;
+  $("keyMsg").textContent = "Checking…";
+  const r = await fetch("https://api.github.com/gists/" + gist, {headers: {Authorization: "token " + k}}).catch(() => null);
+  const g = r?.ok ? await r.json() : null;
+  const scopes = r?.headers.get("x-oauth-scopes") || "";
+  if (!g) { $("keyMsg").textContent = "GitHub refused that token."; return; }
+  if (scopes && !/\bgist\b/.test(scopes)) { $("keyMsg").textContent = "That token lacks the gist scope."; return; }
+  key = k; store.set("board.key", k); $("keyMsg").textContent = "Saved. You can answer now.";
+  setTimeout(() => $("keyDlg").close(), 900);
+  load();
+});
+
 $("refresh").addEventListener("click", load);
+const POLL = () => key ? 30 : 75;  // a token lifts GitHub's 60-an-hour limit for a page with none
 let timer;
-function schedule() { clearInterval(timer); if (!document.hidden) timer = setInterval(load, POLL * 1000); }
+function schedule() { clearInterval(timer); if (!document.hidden) timer = setInterval(() => { if (!document.activeElement?.dataset?.item) load(); }, POLL() * 1000); }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); schedule(); });
-setInterval(() => { if (!document.hidden) render(); }, 30000);  // keep the "for 12m" times moving between polls
+setInterval(() => { if (!document.hidden && !document.activeElement?.dataset?.item) render(); }, 30000);
 load(); schedule();
 </script>
 </body>
