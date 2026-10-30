@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1115">
-<title>Control Centre</title>
+<title>Agent Board</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1115'/%3E%3Ccircle cx='9' cy='16' r='4' fill='%233b82f6'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23a855f7'/%3E%3Ccircle cx='23' cy='16' r='4' fill='%234ade80'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -36,7 +36,6 @@ header{display:flex;align-items:center;gap:8px;margin:4px 0 12px}
 h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
 .stamp{color:var(--muted);font-size:13px}
 button{font:inherit;color:inherit}
-.icon{background:var(--card);border:1px solid var(--line);border-radius:10px;min-width:44px;height:44px;cursor:pointer}
 nav{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px;padding-bottom:2px;position:sticky;top:0;background:var(--bg);z-index:5;padding-top:6px}
 nav a{flex:none;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:13.5px;font-weight:600}
 nav a .n{display:inline-block;min-width:20px;text-align:center;border-radius:999px;background:var(--soft);margin-left:4px;padding:0 5px;font-size:12px}
@@ -56,20 +55,17 @@ h2 small{color:var(--muted);font-weight:400;font-size:13px}
 .stats{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:13px;margin:6px 0 8px}
 .stats b{color:var(--ink)}
 .need{border-left:5px solid var(--k)}
-.need.answered{opacity:.6}
 .nhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .kind{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--k)}
+.need.answered{opacity:.6}
+.need .btn{min-height:36px;padding:0 10px;font-size:13px}
+.why{background:var(--badbg)}
 .mtag{background:var(--c);color:#fff;font-weight:700;font-size:12px;border-radius:6px;padding:2px 7px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mtag{color:#0f1115}}
 :root[data-theme="dark"] .mtag{color:#0f1115}
 .ntitle{font-weight:650;margin:6px 0 4px}
 pre{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--soft);border-radius:6px;padding:7px 8px;margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto}
-.why{background:var(--badbg)}
-textarea{font:inherit;width:100%;min-height:72px;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical;margin-top:6px}
-.acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
 .btn{border:1px solid var(--line);background:var(--soft);border-radius:9px;padding:0 14px;min-height:44px;cursor:pointer;font-weight:600}
-.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.btn:disabled{opacity:.5;cursor:default}
 .hint{color:var(--muted);font-size:12.5px}
 .sent{color:var(--ok);font-size:13px;font-weight:600}
 .lane{border-left:5px solid var(--c)}
@@ -108,13 +104,11 @@ ol li.cur{font-weight:600}
 .feed li{border-top:0;border-bottom:1px solid var(--line)}
 .feed li:last-child{border-bottom:0}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none;margin-top:6px}
+.summary{display:flex;text-decoration:none;color:var(--ink);align-items:center;gap:10px;font-weight:600;border-left:5px solid var(--k,var(--ok))}
+.summary .big{font-size:22px}
+.summary:empty{display:none}
 .empty,.note{color:var(--muted);text-align:center;padding:22px 10px}
 .err{color:var(--bad);font-size:13px;margin:0 2px 10px}
-dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);max-width:min(520px,calc(100vw - 32px));padding:16px}
-dialog::backdrop{background:rgba(0,0,0,.45)}
-dialog h3{margin:0 0 8px}
-dialog p,dialog li{font-size:14px}
-input{font:inherit;width:100%;min-height:44px;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
 .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:0 12px;min-height:36px;cursor:pointer;font-size:13px;font-weight:600}
 .chip.on{background:var(--c,var(--ink));color:var(--bg);border-color:transparent}
@@ -123,48 +117,32 @@ input{font:inherit;width:100%;min-height:44px;padding:9px;border-radius:8px;bord
 <body>
 <main>
   <header>
-    <h1>Control Centre</h1>
+    <h1>Agent Board</h1>
     <span class="stamp" id="stamp"></span>
-    <button class="icon" id="keyBtn" aria-label="Answering setup" title="Answering setup">🔑</button>
-    <button class="icon" id="refresh" aria-label="Refresh">↻</button>
+    <button class="btn" id="refresh" aria-label="Refresh">↻</button>
   </header>
   <nav id="nav"></nav>
   <div class="err" id="err" hidden></div>
-
-  <h2 id="needs-h">Needs Cody <small id="needsSub"></small></h2>
-  <div id="needs"></div>
+  <a class="card summary" id="summary" href="#" data-go="needs-h"></a>
 
   <h2 id="machines-h">Machines</h2>
   <div class="grid" id="machines"></div>
-
-  <h2 id="rounds-h">Rounds <small>the merge lane's merges onto the main line</small></h2>
-  <div class="grid" id="rounds"></div>
 
   <h2 id="lanes-h">Lanes</h2>
   <div class="filters" id="filters"></div>
   <div class="grid" id="lanes"></div>
   <div id="quiet"></div>
 
+  <h2 id="rounds-h">Rounds <small>the merge lane's merges onto the main line</small></h2>
+  <div class="grid" id="rounds"></div>
+
   <h2 id="activity-h">Activity</h2>
   <div class="card"><ol class="feed" id="feed"></ol></div>
+
+  <h2 id="needs-h">For Cody <small id="needsSub"></small></h2>
+  <div id="needs"></div>
 </main>
 
-<dialog id="keyDlg">
-  <h3>Answer from the board</h3>
-  <p>Your answers go into the board's gist, which only your account can write. This needs a token from
-    <b>your</b> GitHub account (the one that owns the gist), with only the <b>gist</b> scope. It can't touch any repo.</p>
-  <ol style="padding-left:18px;list-style:decimal">
-    <li><a id="tokLink" target="_blank" rel="noopener">Make the token</a> (tick only “gist”; no expiry is simplest).</li>
-    <li>Paste it below. It stays in this browser only.</li>
-  </ol>
-  <input id="keyIn" type="password" autocomplete="off" placeholder="ghp_…">
-  <div class="acts">
-    <button class="btn pri" id="keySave">Save</button>
-    <button class="btn" id="keyClear">Forget it</button>
-    <button class="btn" id="keyClose">Close</button>
-    <span class="hint" id="keyMsg"></span>
-  </div>
-</dialog>
 
 <script>
 const MACHINES = [["pc1", "PC 1"], ["pc2", "PC 2"], ["mac", "Mac"]];
@@ -173,15 +151,14 @@ const STATE = {
   limit: ["Usage limit", "--limit", false], waiting: ["Waiting", "--wait", false], paused: ["Paused", "--pause", false],
   stopped: ["Stopped", "--stop", false], between: ["Next job", "--run", true],
 };
-const KINDS = {  // what each kind of item is, and what an answer to it does
-  parked: ["Parked", "--bad", "Your answer puts the job back in its lane's queue, with your answer added to its brief."],
-  open: ["For your eye", "--merge", "Your answer goes to the lane's next seat (and its planner) as your note."],
-  round: ["Round failed", "--bad", "Your answer goes to the merge lane's next seat as your note."],
-  check: ["Main line fails the check", "--limit", "Your answer goes to the lane's next seat as your note."],
-  error: ["Runner error", "--limit", "Your answer goes to the lane's next seat as your note."],
-  stuck: ["Lane stopped", "--limit", "Your answer goes to the lane's next seat as your note, once it runs again."],
-  offline: ["Machine offline", "--stop", ""],
+// The board is for staying in the loop: it only shows. Cody decides from his Control Centre; whoever is watching
+// here just lets him know when something is waiting on him.
+const KINDS = {  // what each kind of item is
+  parked: ["Parked", "--bad"], open: ["Note for Cody", "--merge"], round: ["Round failed", "--bad"],
+  check: ["Main line fails the check", "--limit"], error: ["Runner error", "--limit"], stuck: ["Lane stopped", "--limit"],
+  offline: ["Machine offline", "--stop"],
 };
+const OWNER = "etheydoc";  // the gist's owner, for the raw files when the API is rate-limited
 const STALE = 10 * 60;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -205,16 +182,13 @@ const store = {
 let gist = location.hash.slice(1);
 if (gist) store.set("board.gist", gist); else gist = store.get("board.gist");
 let filter = store.get("board.filter");
-let key = store.get("board.key");
-let data = {}, answers = [], owner = "", fetchedAt = 0;
-const drafts = {};  // item id -> text being typed, kept across re-renders
+let data = {}, answers = [], owner = OWNER, fetchedAt = 0;
 
 async function load() {
   if (!gist) return render();
   try {
     let files;
-    const headers = key ? {Authorization: "token " + key} : {};
-    const r = await fetch("https://api.github.com/gists/" + gist, {cache: "no-cache", headers});
+    const r = await fetch("https://api.github.com/gists/" + gist, {cache: "no-cache"});
     if (r.ok) {
       const g = await r.json();
       owner = g.owner?.login || owner;
@@ -261,7 +235,8 @@ function allLanes() {
   return out;
 }
 
-// Everything that needs Cody, from every machine, with the why.
+// Everything that needs Cody, from every machine, with the why. An item Cody answered or dismissed (answers.json)
+// drops off once the lane has the answer.
 function needs() {
   const items = [];
   const add = (o) => items.push(o);
@@ -324,9 +299,10 @@ function render() {
   const lanes = allLanes();
   const list = needs();
   const open = list.filter((i) => !i.answer).length;
-  $("needsSub").textContent = list.length ? `${open} open${list.length > open ? ` · ${list.length - open} answered, on the way` : ""}` : "";
-  $("nav").innerHTML = [["needs-h", "Needs Cody", open, open > 0], ["machines-h", "Machines"], ["rounds-h", "Rounds"],
-    ["lanes-h", "Lanes", lanes.filter((l) => l.alive && !l.stale).length], ["activity-h", "Activity"]]
+  $("needsSub").textContent = list.length ? `${open} open${list.length > open ? ` · ${list.length - open} answered by Cody, on the way` : ""}` : "";
+  renderSummary(lanes, list, open);
+  $("nav").innerHTML = [["machines-h", "Machines"], ["lanes-h", "Lanes", lanes.filter((l) => l.alive && !l.stale).length],
+    ["rounds-h", "Rounds"], ["activity-h", "Activity"], ["needs-h", "For Cody", open, open > 0]]
     .map(([id, t, n, hot]) => `<a href="#" data-go="${id}">${t}${n !== undefined ? `<span class="n${hot ? " hot" : ""}">${n}</span>` : ""}</a>`).join("");
   renderNeeds(list);
   renderMachines(lanes);
@@ -334,29 +310,38 @@ function render() {
   renderLanes(lanes);
 }
 
+// One line up top: is everything fine, or does someone need to tell Cody?
+function renderSummary(lanes, list, open) {
+  const live = lanes.filter((l) => l.alive && !l.stale);
+  const machines = new Set(live.map((l) => l.m)).size;
+  const urgent = list.filter((i) => !i.answer && i.kind !== "open").length;
+  const [k, icon, text] = urgent ? ["--bad", "⚠", `${urgent} thing${urgent > 1 ? "s are" : " is"} waiting on Cody. Give him a shout.`]
+    : open ? ["--merge", "•", `All running. ${open} note${open > 1 ? "s" : ""} left for Cody, nothing urgent.`]
+    : ["--ok", "✓", "All running smoothly."];
+  $("summary").style.setProperty("--k", `var(${k})`);
+  $("summary").innerHTML = `<span class="big" style="color:var(${k})">${icon}</span><span>${text}
+    <span class="hint" style="font-weight:400">${live.length} lane${live.length === 1 ? "" : "s"} working on ${machines} machine${machines === 1 ? "" : "s"}.</span></span>`;
+}
+
 function renderNeeds(list) {
-  const el = $("needs");
-  const focus = document.activeElement?.dataset?.item;
-  el.innerHTML = list.length ? `<div class="grid">${list.map(needCard).join("")}</div>`
-    : '<p class="card empty">Nothing needs you right now. Parked jobs, calls left for your eye, failed rounds and errors from every machine show up here.</p>';
-  if (focus) { const t = el.querySelector(`textarea[data-item="${CSS.escape(focus)}"]`); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+  $("needs").innerHTML = list.length ? `<div class="grid">${list.map(needCard).join("")}</div>`
+    : '<p class="card empty">Nothing waiting on Cody.</p>';
+}
+
+// What "Copy for Cody" puts on the clipboard, ready to paste into a message.
+function needText(i) {
+  return [`[Agent board] ${label(i.m)}${i.lane ? " · " + i.lane : ""}: ${KINDS[i.kind][0]}`, i.title, i.why ? i.why.slice(0, 900) : ""]
+    .filter(Boolean).join("\n");
 }
 
 function needCard(i) {
-  const [kname, kvar, does] = KINDS[i.kind];
-  const can = !!does && i.lane;
-  const state = i.answer ? `<div class="sent">✓ Sent ${ago(i.answer.at)} ago: “${esc(i.answer.text.slice(0, 140))}”. ${i.taken ? "The lane has it." : "Waiting for the lane to pick it up."}</div>` : "";
-  return `<section class="card need${i.answer ? " answered" : ""}" style="--k:var(${kvar});--c:${color(i.m)}">
-    <div class="nhead"><span class="mtag">${esc(label(i.m))}${i.lane ? " · " + esc(i.lane) : ""}</span><span class="kind">${kname}</span>
-      ${i.at ? `<span class="hint">${ago(i.at)} ago</span>` : ""}</div>
+  const state = i.answer ? `<span class="sent">✓ Cody answered${i.taken ? "" : ", on its way"}</span>`
+    : `<button class="btn" data-copy="${esc(i.id)}">Copy for Cody</button>`;
+  return `<section class="card need${i.answer ? " answered" : ""}" style="--k:var(${KINDS[i.kind][1]});--c:${color(i.m)}">
+    <div class="nhead"><span class="mtag">${esc(label(i.m))}${i.lane ? " · " + esc(i.lane) : ""}</span><span class="kind">${KINDS[i.kind][0]}</span>
+      ${i.at ? `<span class="hint">${ago(i.at)} ago</span>` : ""}<span style="flex:1"></span>${state}</div>
     <div class="ntitle">${esc(i.title)}${i.meta ? ` <span class="jmeta">${esc(i.meta)}</span>` : ""}</div>
-    ${i.why ? `<div class="sub">${i.kind === "open" ? "What the seat left for you" : "Why"}</div><pre${i.kind === "open" ? "" : ' class="why"'}>${esc(i.why)}</pre>` : ""}
-    ${i.brief ? `<details><summary>The job's brief</summary><div class="brief">${esc(i.brief)}</div></details>` : ""}
-    ${state}
-    ${can && !i.answer ? `<textarea data-item="${esc(i.id)}" placeholder="Your answer or direction…">${esc(drafts[i.id] || "")}</textarea>
-      <div class="acts"><button class="btn pri" data-send="${esc(i.id)}">Send to ${esc(i.lane)}</button>
-      <button class="btn" data-dismiss="${esc(i.id)}">Dismiss</button></div><div class="hint" style="margin-top:6px">${esc(does)}</div>`
-      : !i.answer ? `<div class="acts"><button class="btn" data-dismiss="${esc(i.id)}">Dismiss</button></div>` : ""}
+    ${i.why || i.brief ? `<details><summary>Details</summary>${i.why ? `<pre>${esc(i.why)}</pre>` : ""}${i.brief ? `<div class="brief">${esc(i.brief)}</div>` : ""}</details>` : ""}
   </section>`;
 }
 
@@ -365,7 +350,7 @@ function renderMachines(lanes) {
   $("machines").innerHTML = keys.map((k) => {
     const d = data[k];
     if (!d) return `<section class="card mcard" style="--c:${color(k)}"><div class="mhead"><b>${esc(label(k))}</b><span class="hint">no feed yet</span></div>
-      <p class="hint">${k === "mac" ? "The Mac's feed starts with its next lane start once it has the main line, or now with <code>python3 scripts/status_push.py &amp;</code> in its checkout." : "Its feed starts with its next lane start once it has the main line."}</p></section>`;
+      <p class="hint">${k === "mac" ? "Run <code>bash scripts/mac_board_join.sh</code> once in the Mac's checkout." : "Its feed starts with its next lane start once it has the main line."}</p></section>`;
     const stale = now() - d.at > STALE;
     const mine = lanes.filter((l) => l.m === k);
     const live = mine.filter((l) => l.alive);
@@ -462,26 +447,6 @@ function card(l) {
   </section>`;
 }
 
-// ---- answering: the page writes answers.json in the gist; each machine's feed hands them to its lanes ----
-async function writeAnswer(item, kind, text) {
-  if (!key) { openKey(); return false; }
-  const i = needs().find((x) => x.id === item) || {id: item};
-  const headers = {Authorization: "token " + key, Accept: "application/vnd.github+json"};
-  const r = await fetch("https://api.github.com/gists/" + gist, {cache: "no-cache", headers});
-  if (!r.ok) throw new Error(r.status === 401 ? "the saved token was refused" : "GitHub answered " + r.status);
-  const g = await r.json();
-  let cur = [];
-  try { cur = JSON.parse(g.files["answers.json"]?.content || "[]"); } catch {}
-  const a = {id: item + "@" + Date.now(), item, kind, at: Math.floor(now()), m: i.m, lane: i.lane, job: i.job, text};
-  cur = [...cur, a].slice(-400);
-  const w = await fetch("https://api.github.com/gists/" + gist, {method: "PATCH", headers,
-    body: JSON.stringify({files: {"answers.json": {content: JSON.stringify(cur)}}})});
-  if (!w.ok) throw new Error(w.status === 404 || w.status === 403 ? "the token can't write this gist (is it from the gist owner's account, with the gist scope?)" : "GitHub answered " + w.status);
-  answers = cur;
-  return true;
-}
-
-document.addEventListener("input", (e) => { if (e.target.dataset.item) drafts[e.target.dataset.item] = e.target.value; });
 document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
   if (go) { e.preventDefault(); $(go.dataset.go).scrollIntoView({behavior: "smooth"}); return; }
@@ -489,49 +454,20 @@ document.addEventListener("click", async (e) => {
   if (chip) { filter = filter === chip.dataset.m ? "" : chip.dataset.m; store.set("board.filter", filter); render(); return; }
   const clamp = e.target.closest(".clamp");
   if (clamp) { clamp.classList.remove("clamp"); return; }
-  const send = e.target.closest("[data-send]"), dis = e.target.closest("[data-dismiss]");
-  if (!send && !dis) return;
-  const id = (send || dis).dataset.send || (send || dis).dataset.dismiss;
-  const text = send ? (drafts[id] || "").trim() : "";
-  if (send && !text) return;
-  const item = needs().find((x) => x.id === id);
-  (send || dis).disabled = true;
-  try {
-    if (await writeAnswer(id, send ? item.kind : "dismiss", text)) { delete drafts[id]; render(); }
-  } catch (err) {
-    $("err").textContent = "Couldn't send: " + err.message; $("err").hidden = false;
-  }
-  (send || dis).disabled = false;
-});
-
-function openKey() {
-  $("tokLink").href = "https://github.com/settings/tokens/new?scopes=gist&description=control-centre";
-  $("keyIn").value = ""; $("keyMsg").textContent = key ? "A token is saved." : "";
-  $("keyDlg").showModal();
-}
-$("keyBtn").addEventListener("click", openKey);
-$("keyClose").addEventListener("click", () => $("keyDlg").close());
-$("keyClear").addEventListener("click", () => { key = ""; store.set("board.key", ""); $("keyMsg").textContent = "Forgotten."; });
-$("keySave").addEventListener("click", async () => {
-  const k = $("keyIn").value.trim();
-  if (!k) return;
-  $("keyMsg").textContent = "Checking…";
-  const r = await fetch("https://api.github.com/gists/" + gist, {headers: {Authorization: "token " + k}}).catch(() => null);
-  const g = r?.ok ? await r.json() : null;
-  const scopes = r?.headers.get("x-oauth-scopes") || "";
-  if (!g) { $("keyMsg").textContent = "GitHub refused that token."; return; }
-  if (scopes && !/\bgist\b/.test(scopes)) { $("keyMsg").textContent = "That token lacks the gist scope."; return; }
-  key = k; store.set("board.key", k); $("keyMsg").textContent = "Saved. You can answer now.";
-  setTimeout(() => $("keyDlg").close(), 900);
-  load();
+  const copy = e.target.closest("[data-copy]");
+  if (!copy) return;
+  const item = needs().find((x) => x.id === copy.dataset.copy);
+  try { await navigator.clipboard.writeText(needText(item)); copy.textContent = "Copied ✓"; }
+  catch { copy.textContent = "Couldn't copy"; }
+  setTimeout(() => { copy.textContent = "Copy for Cody"; }, 1800);
 });
 
 $("refresh").addEventListener("click", load);
-const POLL = () => key ? 30 : 75;  // a token lifts GitHub's 60-an-hour limit for a page with none
+const POLL = 75;  // GitHub allows a page with no token 60 calls an hour; past that the raw files still answer
 let timer;
-function schedule() { clearInterval(timer); if (!document.hidden) timer = setInterval(() => { if (!document.activeElement?.dataset?.item) load(); }, POLL() * 1000); }
+function schedule() { clearInterval(timer); if (!document.hidden) timer = setInterval(load, POLL * 1000); }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); schedule(); });
-setInterval(() => { if (!document.hidden && !document.activeElement?.dataset?.item) render(); }, 30000);
+setInterval(() => { if (!document.hidden) render(); }, 30000);
 load(); schedule();
 </script>
 </body>
