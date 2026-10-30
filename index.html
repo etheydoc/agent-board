@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1115">
+<title>Agent Board</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1115'/%3E%3Ccircle cx='9' cy='16' r='4' fill='%233b82f6'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23a855f7'/%3E%3Ccircle cx='23' cy='16' r='4' fill='%234ade80'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f5f6f8;--card:#fff;--ink:#14161a;--muted:#646b76;--line:#e3e6eb;--soft:#eef0f3;
+  --pc1:#2563eb;--pc2:#9333ea;--mac:#16a34a;--other:#64748b;
+  --run:#16a34a;--merge:#0891b2;--limit:#d97706;--wait:#ca8a04;--pause:#64748b;--stop:#9ca3af;--bad:#dc2626;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1115;--card:#171a20;--ink:#e8eaee;--muted:#8b93a1;--line:#262a33;--soft:#1f232b;
+  --pc1:#60a5fa;--pc2:#c084fc;--mac:#86efac;--other:#94a3b8;
+  --run:#4ade80;--merge:#22d3ee;--limit:#fbbf24;--wait:#facc15;--pause:#94a3b8;--stop:#6b7280;--bad:#f87171;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1115;--card:#171a20;--ink:#e8eaee;--muted:#8b93a1;--line:#262a33;--soft:#1f232b;
+  --pc1:#60a5fa;--pc2:#c084fc;--mac:#86efac;--other:#94a3b8;
+  --run:#4ade80;--merge:#22d3ee;--limit:#fbbf24;--wait:#facc15;--pause:#94a3b8;--stop:#6b7280;--bad:#f87171;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:860px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px 40px}
+header{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
+h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
+.stamp{color:var(--muted);font-size:13px}
+button{font:inherit;color:inherit}
+.icon{background:var(--card);border:1px solid var(--line);border-radius:10px;width:40px;height:40px;cursor:pointer}
+.machines{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.mchip{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:left;cursor:pointer;min-height:58px;border-top:4px solid var(--c)}
+.mchip.on{outline:2px solid var(--c);outline-offset:-1px}
+.mchip b{display:block;font-size:14px}
+.mchip span{color:var(--muted);font-size:12.5px}
+.summary{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:13.5px;margin:0 2px 12px}
+.summary b{color:var(--ink)}
+.lane{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:12px;padding:12px 12px 10px;margin-bottom:10px}
+.lane.dim{opacity:.62}
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{background:var(--c);color:#fff;font-weight:700;font-size:12px;border-radius:6px;padding:2px 7px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tag{color:#0f1115}}
+:root[data-theme="dark"] .tag{color:#0f1115}
+.ltitle{color:var(--muted);font-size:13px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--s);white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--s)}
+.pill.live i{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.pill.live i{animation:none}}
+.job{margin:8px 0 6px}
+.jid{font-weight:700}
+.jmeta{color:var(--muted);font-size:12.5px}
+.brief{margin-top:3px;font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.last{font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);background:var(--soft);border-radius:6px;padding:5px 7px;margin-top:6px;overflow-wrap:anywhere}
+.bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--muted)}
+.track{flex:1;height:6px;border-radius:3px;background:var(--soft);overflow:hidden;display:flex}
+.track .d{background:var(--c)}.track .p{background:var(--bad)}
+.more{background:none;border:0;color:var(--muted);font-size:12.5px;padding:8px 0 0;cursor:pointer}
+details{margin-top:6px}
+summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ "}details[open] summary::before{content:"▾ "}
+ol{list-style:none;margin:4px 0 0;padding:0}
+ol li{display:flex;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:13px}
+ol li .k{flex:none;width:18px;text-align:center}
+ol li .t{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;width:62px;white-space:nowrap}
+ol li.cur{font-weight:600}
+h2{font-size:15px;margin:22px 2px 8px}
+.feed{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:2px 12px}
+.feed li{border-top:0;border-bottom:1px solid var(--line)}
+.feed li:last-child{border-bottom:0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none;margin-top:6px}
+.empty,.note{color:var(--muted);text-align:center;padding:28px 10px}
+.err{color:var(--bad);font-size:13px;margin:0 2px 10px}
+input{font:inherit;width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Agent Board</h1>
+    <span class="stamp" id="stamp"></span>
+    <button class="icon" id="refresh" aria-label="Refresh">↻</button>
+  </header>
+  <div class="machines" id="machines"></div>
+  <div class="summary" id="summary"></div>
+  <div class="err" id="err" hidden></div>
+  <div id="lanes"></div>
+  <h2>Latest activity</h2>
+  <ol class="feed" id="feed"></ol>
+</main>
+<script>
+const MACHINES = [["pc1", "PC 1"], ["pc2", "PC 2"], ["mac", "Mac"]];
+const STATE = {
+  running: ["Working", "--run", true], merging: ["Merging", "--merge", true], planning: ["Planning", "--merge", true],
+  limit: ["Usage limit", "--limit", false], waiting: ["Waiting", "--wait", false], paused: ["Paused", "--pause", false],
+  stopped: ["Stopped", "--stop", false], between: ["Next job", "--run", true],
+};
+const STALE = 10 * 60;  // a machine silent this long is shown offline
+const POLL = 75;  // seconds; GitHub allows 60 unauthenticated calls an hour, and unchanged answers are free
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const color = (m) => MACHINES.some(([k]) => k === m) ? `var(--${m})` : "var(--other)";
+const label = (m) => (MACHINES.find(([k]) => k === m) || [m, m])[1];
+const now = () => Date.now() / 1000;
+function ago(t) {
+  if (!t) return "";
+  const s = Math.max(0, now() - t);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + "m";
+  if (s < 86400) return Math.floor(s / 3600) + "h " + Math.floor(s % 3600 / 60) + "m";
+  return Math.floor(s / 86400) + "d";
+}
+const clock = (t) => new Date(t * 1000).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+
+let gist = location.hash.slice(1);
+try { if (gist) localStorage.setItem("board.gist", gist); else gist = localStorage.getItem("board.gist") || ""; } catch {}
+let filter = "";
+try { filter = localStorage.getItem("board.filter") || ""; } catch {}
+let data = {}, owner = "", fetchedAt = 0;
+
+async function load() {
+  if (!gist) return;
+  try {
+    let files;
+    const r = await fetch("https://api.github.com/gists/" + gist, {cache: "no-cache"});
+    if (r.ok) {
+      const g = await r.json();
+      owner = g.owner?.login || owner;
+      files = Object.fromEntries(Object.entries(g.files).map(([n, f]) => [n, f.content]));
+    } else if (owner && (r.status === 403 || r.status === 429)) {  // rate-limited: the raw files still answer
+      files = {};
+      for (const [m] of MACHINES) {
+        const f = await fetch(`https://gist.githubusercontent.com/${owner}/${gist}/raw/${m}.json?t=${Date.now()}`);
+        if (f.ok) files[m + ".json"] = await f.text();
+      }
+    } else throw new Error("GitHub answered " + r.status);
+    const next = {};
+    for (const [name, text] of Object.entries(files)) {
+      if (!name.endsWith(".json")) continue;
+      try { const d = JSON.parse(text); if (d && d.lanes) next[d.machine || name.slice(0, -5)] = d; } catch {}
+    }
+    data = next; fetchedAt = now();
+    $("err").hidden = true;
+  } catch (e) {
+    $("err").textContent = "Couldn't refresh (" + e.message + "). Showing the last view.";
+    $("err").hidden = false;
+  }
+  render();
+}
+
+function laneState(l) {
+  if (l.state === "running" && l.job?.finished) return "between";
+  return STATE[l.state] ? l.state : "running";
+}
+
+function render() {
+  if (!gist) {
+    $("lanes").innerHTML = '<p class="note">Open the board from its full link (the part after # is the feed). It is remembered after that.</p>';
+    return;
+  }
+  $("stamp").textContent = fetchedAt ? "updated " + clock(fetchedAt) : "loading…";
+  const keys = [...new Set([...MACHINES.map(([k]) => k), ...Object.keys(data)])];
+  $("machines").innerHTML = keys.filter((k) => MACHINES.some(([m]) => m === k) || data[k]).map((k) => {
+    const d = data[k];
+    let text = "no feed yet";
+    if (d) {
+      const live = d.lanes.filter((l) => l.alive).length;
+      text = now() - d.at > STALE ? "offline · " + ago(d.at) : live ? live + " lane" + (live > 1 ? "s" : "") + " running" : "idle";
+    }
+    return `<button class="mchip${filter === k ? " on" : ""}" style="--c:${color(k)}" data-m="${esc(k)}"><b>${esc(label(k))}</b><span>${esc(text)}</span></button>`;
+  }).join("");
+
+  const lanes = [];
+  for (const [m, d] of Object.entries(data)) {
+    const stale = now() - d.at > STALE;
+    for (const l of d.lanes) lanes.push({...l, m, stale});
+  }
+  const shown = lanes.filter((l) => !filter || l.m === filter);
+  const count = (s) => shown.filter((l) => l.alive && !l.stale && laneState(l) === s).length;
+  const parked = shown.reduce((n, l) => n + l.parked, 0), done = shown.reduce((n, l) => n + l.done, 0);
+  $("summary").innerHTML = [
+    [count("running") + count("between"), "working"], [count("merging") + count("planning"), "merging or planning"],
+    [count("limit"), "at a usage limit"], [count("waiting") + count("paused"), "waiting"], [done, "jobs done"],
+    [parked, "parked"],
+  ].filter(([n], i) => n || i === 0).map(([n, t]) => `<span><b>${n}</b> ${t}</span>`).join("");
+
+  const rank = {running: 0, between: 0, merging: 1, planning: 1, limit: 2, waiting: 3, paused: 4, stopped: 5};
+  shown.sort((a, b) => (a.stale - b.stale) || ((rank[laneState(a)] ?? 9) - (rank[laneState(b)] ?? 9)) || a.lane.localeCompare(b.lane));
+  const active = shown.filter((l) => l.alive && !l.stale), quiet = shown.filter((l) => !(l.alive && !l.stale));
+  $("lanes").innerHTML = (active.length ? active.map(card).join("") : '<p class="empty">No lanes running right now.</p>')
+    + (quiet.length ? `<details${active.length ? "" : " open"}><summary>Stopped in the last 12 hours (${quiet.length})</summary>${quiet.map(card).join("")}</details>` : "");
+
+  const feed = [];
+  for (const l of shown) for (const [t, msg] of l.events || []) feed.push([t, l.m, l.lane, msg]);
+  feed.sort((a, b) => b[0] - a[0]);
+  $("feed").innerHTML = feed.slice(0, 25).map(([t, m, lane, msg]) =>
+    `<li><span class="dot" style="--c:${color(m)}"></span><span class="t">${clock(t)}</span><span><b>${esc(lane)}</b> ${esc(msg)}</span></li>`
+  ).join("") || '<li class="empty">Nothing yet. Lanes started before the board log their messages from their next start.</li>';
+}
+
+function card(l) {
+  const st = l.stale ? "stopped" : laneState(l);
+  const [name, svar, live] = STATE[st];
+  const stText = l.stale ? "Machine offline" : st === "limit" && /waiting (\d+) min/.test(l.last) ? "Usage limit · " + l.last.match(/waiting (\d+) min/)[1] + "m wait" : name;
+  const j = l.job;
+  const jobHtml = j && l.alive ? `<div class="job"><span class="jid">${esc(j.id)}</span>
+    <span class="jmeta">${esc([j.role, j.effort].filter(Boolean).join(" · "))}${l.since && !j.finished ? " · for " + ago(l.since) : ""}${j.finished ? " · just finished" : ""}</span>
+    ${j.brief ? `<div class="brief">${esc(j.brief)}</div>` : ""}</div>` : "";
+  const pct = (n) => l.total ? (100 * n / l.total).toFixed(1) + "%" : "0";
+  const last = l.last && !(st === "running" && j && l.last.startsWith(j.id + " (")) ? `<div class="last">${esc(l.last)}</div>` : "";
+  const jobs = (l.jobs || []).map(([s, id, role, effort, brief]) => {
+    const cur = j && id === j.id && l.alive;
+    const k = s === "x" ? "✓" : s === "!" ? "⚠" : cur ? "●" : "○";
+    return `<li class="${cur ? "cur" : ""}"><span class="k">${k}</span><span><b>${esc(id)}</b> <span class="jmeta">${esc(role)} · ${esc(effort)}</span><br>${esc(brief)}</span></li>`;
+  }).join("");
+  const events = (l.events || []).slice().reverse().map(([t, msg]) => `<li><span class="t">${clock(t)}</span><span>${esc(msg)}</span></li>`).join("");
+  return `<section class="lane${l.alive && !l.stale ? "" : " dim"}" style="--c:${color(l.m)}">
+    <div class="top"><span class="tag">${esc(l.lane)}</span><span class="ltitle">${esc(l.title.replace(/^Lane \w+:\s*/, ""))}</span>
+      <span class="pill${live && !l.stale ? " live" : ""}" style="--s:var(${l.stale ? "--stop" : svar})"><i></i>${esc(stText)}</span></div>
+    ${jobHtml}${last}
+    <div class="bar"><div class="track"><span class="d" style="width:${pct(l.done)}"></span><span class="p" style="width:${pct(l.parked)}"></span></div>
+      ${l.done}/${l.total}${l.parked ? ` · <span style="color:var(--bad)">${l.parked} parked</span>` : ""}${l.commit ? " · commit " + ago(l.commit[0]) + " ago" : ""}</div>
+    ${jobs || events ? `<details><summary>Queue and messages</summary>${jobs ? `<ol>${jobs}</ol>` : ""}${events ? `<ol>${events}</ol>` : ""}</details>` : ""}
+  </section>`;
+}
+
+$("machines").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-m]");
+  if (!b) return;
+  filter = filter === b.dataset.m ? "" : b.dataset.m;
+  try { localStorage.setItem("board.filter", filter); } catch {}
+  render();
+});
+$("refresh").addEventListener("click", load);
+let timer;
+function schedule() { clearInterval(timer); if (!document.hidden) timer = setInterval(load, POLL * 1000); }
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); schedule(); });
+setInterval(() => { if (!document.hidden) render(); }, 30000);  // keep the "for 12m" times moving between polls
+load(); schedule();
+</script>
+</body>
+</html>
