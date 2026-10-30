@@ -189,8 +189,8 @@ dialog p,dialog li{font-size:14px}
     <span class="hint" id="keyMsg"></span>
   </div>
   <h3 style="margin-top:16px">Your week</h3>
-  <p class="hint" style="margin-top:0">The weekly % from Claude's usage card (Settings → Usage, or <code>/usage</code>). Orchestrators update it each
-    round; type it here when it looks off. The reset time carries over from the last reading.</p>
+  <p class="hint" style="margin-top:0">The weekly % from Claude's usage card (Settings → Usage). One reading calibrates every estimate; type a new
+    one whenever it looks off. It costs no usage. The reset time carries over from the last reading.</p>
   <div class="acts"><input id="capIn" type="text" inputmode="decimal" placeholder="% used" style="width:110px"><button class="btn" id="capSave">Save</button></div>
   <p class="hint">Phone pushes even with this page closed: put an <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a>
     topic name in <code>~/.config/agent-board/ntfy</code> on PC 1 and subscribe to it in the ntfy app.</p>
@@ -558,7 +558,7 @@ function renderTop(block, working) {
   if (mins) parts.push(`~${mins} min of yours`);
   parts.push(`${working} agent${working === 1 ? "" : "s"} working`);
   const w = week();
-  if (w.ok) parts.push(`<span class="${w.pct > 85 || (w.hitAt && w.hitAt < w.resets) ? "bad" : ""}">week ${fmtPct(w.pct)} used</span>`);
+  if (w.ok) parts.push(`<span class="${w.pct > 85 ? "bad" : ""}">week ${fmtPct(w.pct)} used</span>`);
   const nx = nextEvent();
   const where = (M.state?.where || "").match(/[^.]+\./g) || [];  // whole sentences, up to ~200 characters
   let ws = "";
@@ -733,9 +733,7 @@ function week() {
   let resets = cal.resets;
   while (resets < t) resets += WEEK;
   const pct = resets === cal.resets ? cal.pct + between(cal.at, t) / unit : between(resets - WEEK, t) / unit;
-  const span = Math.max(6 * 3600, Math.min(86400, t - (resets - WEEK)));  // pace from this week's runs only
-  const dayPct = between(t - span, t) / unit * 86400 / span;
-  return {ok: true, unit, pct, dayPct, resets, cal, hitAt: dayPct > 0 ? t + (100 - pct) / dayPct * 86400 : 0};
+  return {ok: true, unit, pct, resets, cal};
 }
 const pctOf = (w8) => { const w = week(); return w.ok ? fmtPct(w8 / w.unit) + " of your week" : "an unknown share of your week"; };
 const when = (t) => new Date(t * 1000).toLocaleString([], {weekday: "short", hour: "numeric", minute: "2-digit"});
@@ -914,10 +912,8 @@ function renderHealth() {
   const max = Math.max(1e-6, ...Object.values(rows));
   if (!w.ok) out.push(`<h3>Your week</h3><div class="l2">Enter your weekly usage once under 🔑 (from Claude's usage card) to see the seats' use as a share of your week.</div>`);
   else {
-    const before = w.hitAt && w.hitAt < w.resets;
     out.push(`<h3>Your week</h3><div class="l2"><b>${fmtPct(w.pct)}</b> used; it resets ${when(w.resets)}.
-      ${w.dayPct ? `The seats are using ${fmtPct(w.dayPct)} a day: at that pace you ${before ? `<b class="bad">reach the limit ~${when(w.hitAt)}</b>, before the reset` : `don't reach the limit before the reset`}.` : ""}
-      <div class="bar"><div class="track" style="max-width:none"><span class="${w.pct > 85 || before ? "over" : "d"}" style="--c:var(--merge);width:${Math.min(100, w.pct).toFixed(0)}%"></span></div></div>
+      <div class="bar"><div class="track" style="max-width:none"><span class="${w.pct > 85 ? "over" : "d"}" style="--c:var(--merge);width:${Math.min(100, w.pct).toFixed(0)}%"></span></div></div>
       <div class="hint">From Claude's usage card (${fmtPct(w.cal.pct)}, ${ago(w.cal.at)}) plus the seats' runs since; your own sessions since then aren't counted. Update it under 🔑.</div></div>`);
   }
   if (Object.keys(rows).length) out.push(`<h3>Today, by lane</h3><div class="l2">The seats used <b>${share(today) || "?"}</b> of your week today.</div>
