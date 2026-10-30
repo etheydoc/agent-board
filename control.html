@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1115">
+<title>Control Centre</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1115'/%3E%3Cpath d='M9 17l5 5 9-12' stroke='%234ade80' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f5f6f8;--card:#fff;--ink:#14161a;--muted:#646b76;--line:#e3e6eb;--soft:#eef0f3;
+  --pc1:#2563eb;--pc2:#9333ea;--mac:#16a34a;--other:#64748b;
+  --run:#16a34a;--merge:#0891b2;--limit:#d97706;--wait:#ca8a04;--pause:#64748b;--stop:#9ca3af;--bad:#dc2626;--ok:#16a34a;
+  --badbg:#fef2f2;--warnbg:#fffbeb;--okbg:#f0fdf4;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1115;--card:#171a20;--ink:#e8eaee;--muted:#8b93a1;--line:#262a33;--soft:#1f232b;
+  --pc1:#60a5fa;--pc2:#c084fc;--mac:#86efac;--other:#94a3b8;
+  --run:#4ade80;--merge:#22d3ee;--limit:#fbbf24;--wait:#facc15;--pause:#94a3b8;--stop:#6b7280;--bad:#f87171;--ok:#4ade80;
+  --badbg:#2a1517;--warnbg:#2a2312;--okbg:#122119;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1115;--card:#171a20;--ink:#e8eaee;--muted:#8b93a1;--line:#262a33;--soft:#1f232b;
+  --pc1:#60a5fa;--pc2:#c084fc;--mac:#86efac;--other:#94a3b8;
+  --run:#4ade80;--merge:#22d3ee;--limit:#fbbf24;--wait:#facc15;--pause:#94a3b8;--stop:#6b7280;--bad:#f87171;--ok:#4ade80;
+  --badbg:#2a1517;--warnbg:#2a2312;--okbg:#122119;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:1000px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px 64px}
+header{display:flex;align-items:center;gap:8px;margin:4px 0 10px}
+h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
+.stamp{color:var(--muted);font-size:13px}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.icon{background:var(--card);border:1px solid var(--line);border-radius:10px;min-width:44px;height:44px;cursor:pointer}
+nav{display:flex;gap:6px;overflow-x:auto;margin:0 -16px 12px;padding:6px 16px 4px;position:sticky;top:0;background:var(--bg);z-index:5}
+nav a{flex:none;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:13.5px;font-weight:600}
+nav a .n{display:inline-block;min-width:20px;text-align:center;border-radius:999px;background:var(--soft);margin-left:4px;padding:0 5px;font-size:12px}
+nav a .n.hot{background:var(--bad);color:#fff}
+h2{font-size:16px;margin:24px 2px 8px;display:flex;align-items:baseline;gap:8px;scroll-margin-top:60px}
+h2 small{color:var(--muted);font-weight:400;font-size:13px}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 2px 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.stack>*+*{margin-top:8px}
+.headline{font-size:16.5px;font-weight:600;line-height:1.4}
+.headline .sub{display:block;font-size:13.5px;font-weight:400;color:var(--muted);margin-top:4px}
+.blind{margin-top:10px;border-left:4px solid var(--limit);background:var(--warnbg);border-radius:8px;padding:8px 10px;font-size:13.5px}
+.blind code,.copy{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.copy{display:block;background:var(--soft);border-radius:6px;padding:6px 8px;margin-top:5px;overflow-wrap:anywhere;cursor:copy}
+.since{border-left:4px solid var(--merge)}
+.since ul{margin:6px 0 0;padding-left:18px}.since li{font-size:14px;margin:3px 0}
+.todo{border-left:5px solid var(--k);padding:0}
+.todo>summary{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;cursor:pointer;list-style:none}
+.todo>summary::-webkit-details-marker{display:none}
+.todo .num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--k);color:#fff;font-weight:700;font-size:13px;display:grid;place-items:center;margin-top:1px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .todo .num{color:#0f1115}}
+:root[data-theme="dark"] .todo .num{color:#0f1115}
+.todo .tt{flex:1;min-width:0}
+.todo .tt b{font-weight:650}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.chip{font-size:12px;font-weight:600;border-radius:6px;padding:1px 7px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.chip.hot{background:var(--bad);color:#fff}
+.chip.m{background:var(--c);color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip.m{color:#0f1115}}
+:root[data-theme="dark"] .chip.m{color:#0f1115}
+.todo .body{padding:0 12px 12px 46px}
+@media (max-width:520px){.todo .body{padding-left:12px}}
+.mem{background:var(--soft);border-radius:8px;padding:8px 10px;font-size:13.5px}
+.mem p{margin:3px 0}
+.said{border-left:3px solid var(--merge);padding-left:8px;font-style:italic}
+.calls{font-size:14px;overflow-wrap:anywhere}
+.calls code,.mem code{font-size:12.5px;background:var(--soft);border-radius:4px;padding:0 3px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:8px}
+.gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:zoom-in;background:var(--soft)}
+.gallery figure{margin:0}.gallery figcaption{font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+pre{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--soft);border-radius:6px;padding:7px 8px;margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}
+textarea,input[type=text],input[type=password],select{font:inherit;width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea{min-height:68px;resize:vertical;margin-top:8px}
+input,select{min-height:44px}
+.acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--soft);border-radius:9px;padding:0 14px;min-height:44px;cursor:pointer;font-weight:600;text-decoration:none;display:inline-flex;align-items:center}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:default}
+.hint{color:var(--muted);font-size:12.5px}
+.sent{color:var(--ok);font-size:13px;font-weight:600}
+.row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0;padding-top:2px}
+.row .tag{flex:none;background:var(--c);color:#fff;font-weight:700;font-size:12px;border-radius:6px;padding:2px 7px;margin-top:1px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .row .tag{color:#0f1115}}
+:root[data-theme="dark"] .row .tag{color:#0f1115}
+.row .main{flex:1;min-width:0}
+.row .l1{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.row .l1 b{font-weight:650}
+.row .l2{font-size:13.5px;margin-top:2px;overflow-wrap:anywhere}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--s);white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--s)}
+.pill.live i{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.pill.live i{animation:none}}
+.bar{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--muted)}
+.track{flex:1;height:6px;border-radius:3px;background:var(--soft);overflow:hidden;display:flex;max-width:260px}
+.track .d{background:var(--c)}.track .over{background:var(--limit)}
+.spawn{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.spawn select{width:auto}
+.spawn input{flex:1;min-width:180px}
+details.more>summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 0;list-style:none}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:"▸ "}details.more[open]>summary::before{content:"▾ "}
+ol.plain{margin:4px 0 0;padding-left:20px}ol.plain li{margin:4px 0;font-size:14px}
+.issue{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.issue:first-child{border-top:0}
+.issue .sev{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--k)}
+.issue .who{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.spend td{padding:3px 8px 3px 0;font-size:13.5px;font-variant-numeric:tabular-nums}
+.spend td.v{text-align:right}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.lane{border-left:5px solid var(--c)}
+.jmeta{color:var(--muted);font-size:12.5px}
+.brief{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13.5px}
+.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.calls.clamp{-webkit-line-clamp:4}
+ol.jobs{list-style:none;margin:4px 0 0;padding:0}
+ol.jobs li{display:flex;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:13px;min-width:0}
+ol.jobs li>span:last-child{min-width:0;overflow-wrap:anywhere}
+ol.jobs .k{flex:none;width:18px;text-align:center}
+ol.jobs .t{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;width:62px}
+.ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
+.empty{color:var(--muted);text-align:center;padding:18px 10px}
+.err{color:var(--bad);font-size:13px;margin:0 2px 10px}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);max-width:min(560px,calc(100vw - 32px));padding:16px}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+dialog h3{margin:0 0 8px;font-size:16px;text-transform:none;letter-spacing:0;color:var(--ink)}
+dialog p,dialog li{font-size:14px}
+#imgDlg{max-width:calc(100vw - 16px);padding:8px}
+#imgDlg img{max-width:100%;max-height:80vh;display:block;border-radius:8px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Control Centre</h1>
+    <span class="stamp" id="stamp"></span>
+    <button class="icon" id="bellBtn" aria-label="Alerts on this device" title="Alerts on this device">🔔</button>
+    <button class="icon" id="keyBtn" aria-label="Setup" title="Setup">🔑</button>
+    <button class="icon" id="refresh" aria-label="Refresh">↻</button>
+  </header>
+  <nav id="nav"></nav>
+  <div class="err" id="err" hidden></div>
+
+  <section class="card" id="top"></section>
+  <div id="since"></div>
+
+  <h2 id="todo-h">To do <small id="todoSub"></small></h2>
+  <div id="todo" class="stack"></div>
+
+  <h2 id="now-h">Now <small>every agent, what it's doing, the ones a lot relies on first</small></h2>
+  <div class="card stack" id="spawn"></div>
+  <div class="card" id="now" style="margin-top:8px"></div>
+
+  <h2 id="next-h">Coming up</h2>
+  <div class="card" id="next"></div>
+
+  <h2 id="health-h">Health and spend</h2>
+  <div class="card" id="health"></div>
+
+  <h2 id="lanes-h">Lanes and rounds</h2>
+  <div id="lanes"></div>
+</main>
+
+<dialog id="keyDlg">
+  <h3>Setup on this device</h3>
+  <p>To answer and start orchestrators, this browser needs a token from <b>your</b> GitHub account (etheydoc), with only
+    the <b>gist</b> scope. It can't touch any repo, and it stays in this browser.</p>
+  <ol style="padding-left:18px">
+    <li><a target="_blank" rel="noopener" href="https://github.com/settings/tokens/new?scopes=gist&description=control-centre">Make the token</a> (tick only “gist”).</li>
+    <li>Paste it below.</li>
+  </ol>
+  <input id="keyIn" type="password" autocomplete="off" placeholder="ghp_…">
+  <div class="acts">
+    <button class="btn pri" id="keySave">Save</button>
+    <button class="btn" id="keyClear">Forget it</button>
+    <button class="btn" id="keyClose">Close</button>
+    <span class="hint" id="keyMsg"></span>
+  </div>
+  <p class="hint">Phone pushes even with this page closed: put an <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a>
+    topic name in <code>~/.config/agent-board/ntfy</code> on PC 1 and subscribe to it in the ntfy app.</p>
+</dialog>
+<dialog id="imgDlg"><img id="imgBig" alt=""><div class="hint" id="imgCap" style="margin-top:6px"></div>
+  <div class="acts"><button class="btn" onclick="this.closest('dialog').close()">Close</button></div></dialog>
+
+<script>
+// Cody's Control Centre. It reads the agent board's gist (every machine's lanes; Ethan's board reads it too) and the
+// control gist (Cody only: his sessions, the project's state, preview images, spend and answers.json), and writes his
+// answers and spawn requests to the control gist. The feeds (scripts/status_push.py) do the rest, with no Claude.
+const BOARD = "7394568de07dc2de4f964852bbf56cd0";
+const OWNER = "etheydoc";
+const MACHINES = [["pc1", "PC 1"], ["pc2", "PC 2"], ["mac", "Mac"]];
+const CONTROL_MACHINES = ["pc1", "pc2"];  // where an orchestrator can start; the Mac never takes control
+const STATE = {
+  running: ["Working", "--run", true], merging: ["Merging", "--merge", true], planning: ["Planning", "--merge", true],
+  limit: ["Usage limit", "--limit", false], waiting: ["Waiting", "--wait", false], paused: ["Paused", "--pause", false],
+  stopped: ["Stopped", "--stop", false], between: ["Next job", "--run", true],
+};
+const STALE = 10 * 60;
+const JOBID = /\b[A-Z]\d+-\d+\b/g;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const color = (m) => MACHINES.some(([k]) => k === m) ? `var(--${m})` : "var(--other)";
+const label = (m) => (MACHINES.find(([k]) => k === m) || [m, m])[1];
+const now = () => Date.now() / 1000;
+const uniq = (a) => [...new Set(a)];
+function dur(s) {
+  s = Math.max(0, Math.round(s));
+  if (s < 60) return "<1m";
+  if (s < 3600) return Math.round(s / 60) + "m";
+  if (s < 86400) return Math.floor(s / 3600) + "h " + String(Math.floor(s % 3600 / 60)).padStart(2, "0") + "m";
+  return Math.floor(s / 86400) + "d " + Math.floor(s % 86400 / 3600) + "h";
+}
+const ago = (t) => t ? dur(now() - t) + " ago" : "";
+const clock = (t) => new Date(t * 1000).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+const store = {
+  get: (k, d = "") => { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} },
+};
+// a seat's markdown, lightly: `code`, **bold**, and its own line breaks
+const md = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+const first = (s, n = 160) => { s = String(s || "").replace(/\s+/g, " ").trim(); const m = s.match(/^(.{20,}?[.:;])\s/); s = m ? m[1] : s; return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+const plain = (l) => l.title.replace(/^Lane \w+:\s*/, "").replace(/\s*\([^)]*\)\s*$/, "");
+
+let control = location.hash.slice(1);
+if (control) { store.set("cc.control", control); history.replaceState(null, "", location.pathname); }
+else control = store.get("cc.control");
+let key = store.get("board.key");
+let board = {}, ctl = {}, imgs = {}, answers = [], fetchedAt = 0;
+const drafts = {};
+let M = null;  // the model, rebuilt on each render
+
+// ---- loading ----
+async function gistFiles(id) {
+  const headers = key ? {Authorization: "token " + key} : {};
+  const r = await fetch("https://api.github.com/gists/" + id, {cache: "no-cache", headers});
+  if (r.ok) {
+    const g = await r.json(), files = {};
+    await Promise.all(Object.entries(g.files).map(async ([n, f]) => {
+      files[n] = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+    }));
+    return files;
+  }
+  if (r.status === 403 || r.status === 429) {  // rate-limited: the raw links still answer
+    const files = {};
+    const names = [...MACHINES.map(([k]) => k + ".json"), ...(id === BOARD ? [] : ["answers.json", ...CONTROL_MACHINES.map((k) => `img-${k}.json`)])];
+    await Promise.all(names.map(async (n) => {
+      const f = await fetch(`https://gist.githubusercontent.com/${OWNER}/${id}/raw/${n}?t=${Date.now()}`);
+      if (f.ok) files[n] = await f.text();
+    }));
+    return files;
+  }
+  throw new Error("GitHub answered " + r.status);
+}
+const parse = (t, d) => { try { return JSON.parse(t); } catch { return d; } };
+
+async function load() {
+  if (!control) return render();
+  try {
+    const [b, c] = await Promise.all([gistFiles(BOARD), gistFiles(control)]);
+    const nb = {}, nc = {}, ni = {};
+    for (const [n, t] of Object.entries(b)) { const d = parse(t); if (d && d.lanes) nb[d.machine || n.slice(0, -5)] = d; }
+    for (const [n, t] of Object.entries(c)) {
+      if (n === "answers.json") answers = parse(t, []) || [];
+      else if (n.startsWith("img-")) Object.assign(ni, parse(t, {}));
+      else if (n.endsWith(".json")) { const d = parse(t); if (d && d.machine) nc[d.machine] = d; }
+    }
+    board = nb; ctl = nc; imgs = ni; fetchedAt = now();
+    $("err").hidden = true;
+  } catch (e) {
+    $("err").textContent = "Couldn't refresh (" + e.message + "). Showing the last view.";
+    $("err").hidden = false;
+  }
+  render();
+}
+
+// ---- the model: everything the sections draw from ----
+function laneState(l) {
+  if (l.stale) return "stopped";
+  if (l.state === "running" && l.job?.finished) return "between";
+  return STATE[l.state] ? l.state : "running";
+}
+function refsOf(text) {  // the jobs and lanes a piece of text waits on
+  const t = String(text || "");
+  return {jobs: uniq(t.match(JOBID) || []), lanes: uniq([...t.matchAll(/path\/([a-z]\d+)/gi)].map((m) => m[1].toUpperCase()))};
+}
+function avgJob(l) {  // a job's usual length on this lane, from its seat runs
+  const js = (l.runs || []).filter((r) => /^[A-Z]\d+-\d+$/.test(r[0])).slice(-8).map((r) => r[2]);
+  return js.length ? js.reduce((a, b) => a + b, 0) / js.length : 50 * 60;
+}
+function youSaid(text) {  // Cody's own words quoted in a brief: "(Cody, Oct 30: ...)"
+  return [...String(text || "").matchAll(/\(Cody,? ([A-Z][a-z]{2} \d{1,2})?:?\s*([^)]{8,})\)/g)].map((m) => [m[1] || "", m[2].trim()]);
+}
+function causeOf(tail) {  // a failed round's one-line cause, and the fix when it's one we've seen
+  const t = String(tail || "");
+  if (/screen_capture|timed out after \d+/.test(t)) return ["Studio's screenshot timed out (the smoke tour)",
+    "Keep PC 1's display awake during rounds and run with STUDIO_LOCK_MAX_MIN=35; the tour takes ~21 min."];
+  if (/never listed/.test(t)) return ["Studio never opened the round's place", "Studio failed to open; usually a retry lands it."];
+  if (/check\.sh.*FAIL|FAILED/.test(t)) return ["the check failed", "The lead reads the log and sends the culprit back."];
+  const line = t.trim().split("\n").filter(Boolean).pop() || "";
+  return [line.slice(0, 140), ""];
+}
+
+function build() {
+  const t0 = now();
+  const lanes = [];
+  for (const [m, d] of Object.entries(board)) {
+    const stale = t0 - d.at > STALE;
+    for (const l of d.lanes) lanes.push({...l, m, stale, live: l.alive && !stale});
+  }
+  const byJob = new Map();
+  for (const l of lanes) for (const j of l.jobs || []) byJob.set(j[1], {l, j});
+  const sessions = [];
+  let state = null, stateM = "pc1";
+  for (const [m, c] of Object.entries(ctl)) {
+    for (const s of c.sessions || []) sessions.push({...s, m});
+    if (c.state && (!state || c.state.at > state.at)) { state = c.state; stateM = m; }
+  }
+  const taken = new Set([...lanes.flatMap((l) => l.answered || []), ...Object.values(ctl).flatMap((c) => c.lead?.answered || [])]);
+  const answerOf = (item) => answers.filter((a) => a.item === item).pop();
+  const dismissed = (item) => answerOf(item)?.kind === "dismiss";
+  const lead = (item, kind) => ({item, kind, m: stateM, lane: "LEAD", job: ""});
+
+  // timing per lane
+  for (const l of lanes) {
+    l.avg = avgJob(l);
+    const queued = (l.jobs || []).filter((j) => j[0] === " " && !(l.job && j[1] === l.job.id && l.live)).length;
+    l.queued = queued;
+    l.elapsed = l.live && l.since && !l.job?.finished ? t0 - l.since : 0;
+    l.curLeft = l.live && l.job && !l.job.finished ? Math.max(l.avg - l.elapsed, 5 * 60) : 0;
+    l.left = l.live ? l.curLeft + queued * l.avg : 0;
+    l.endAt = l.left ? t0 + l.left : 0;
+    l.dependents = [];
+  }
+  // who waits on whom
+  const waits = [];  // parked jobs that wait on other agents' work
+  const onCody = [];  // parked jobs that wait on Cody
+  const checkParked = [];  // parked by a failed check: the lead's to sort out
+  for (const l of lanes) for (const j of (l.jobs || []).filter((x) => x[0] === "!")) {
+    const why = l.why?.[j[1]] || "";
+    const refs = refsOf(why);
+    const failed = /^parked [A-Z][a-z]{2} \d/.test(why);
+    if (/\bCody\b/.test(why)) onCody.push({l, j, why, refs, failed});
+    else if (failed) checkParked.push({l, j, why});
+    else waits.push({l, j, why, refs});
+  }
+  for (const l of lanes) for (const j of (l.jobs || []).filter((x) => x[0] !== "x")) {
+    const r = refsOf((j[0] === "!" ? (l.why?.[j[1]] || "") : "") + " " + ((j[4] || "").match(/\[needs [^\]]+\]/g) || []).join(" "));
+    for (const o of lanes) {
+      if (o === l) continue;
+      if (r.lanes.includes(o.lane) || r.jobs.some((id) => byJob.get(id)?.l === o && byJob.get(id).j[0] !== "x")) o.dependents.push(j[1]);
+    }
+  }
+
+  // ---- the to-do list ----
+  const todo = [];
+  const add = (o) => todo.push(o);
+  const at = (l, job) => { const r = (l.runs || []).filter((x) => x[0] === job).pop(); return r ? r[1] + r[2] : 0; };
+
+  // the seats' calls, one card per lane, with the parked jobs that wait on them
+  for (const l of lanes) {
+    // an item the lane already took is gone; one answered but not yet taken waits under "Sent" unless others are open
+    // only what a seat left for Cody: its Cody lines, or Open text that names him (the rest of Open is the lead's)
+    const forCody = (o) => (o.cody || []).length || /\bCody\b|your (eye|look|call)/i.test(o.text);
+    const live = (l.open || []).filter(forCody).filter((o) => { const a = answerOf(`open:${l.lane}:${o.job}`); return !a || (a.kind !== "dismiss" && !taken.has(a.id)); });
+    const unanswered = live.filter((o) => !answerOf(`open:${l.lane}:${o.job}`));
+    const items = unanswered.length ? unanswered : live;
+    if (!items.length) continue;
+    const jobs = items.map((o) => o.job);
+    const parkedHere = onCody.filter((p) => !p.failed && p.refs.jobs.some((id) => jobs.includes(id)));
+    parkedHere.forEach((p) => p.grouped = true);
+    const unblocks = uniq([...parkedHere.map((p) => p.j[1]), ...items.flatMap((o) => (o.cody || []).flatMap((c) => c.unblocks || []))]);
+    const keys = items.flatMap((o) => (ctl[l.m]?.imgs || {})[`${l.lane}:${o.job}`] || []);
+    const roadmap = (state?.next || []).findIndex((n) => /\bCody\b/.test(n) && (jobs.some((id) => n.includes(id))
+      || keys.some((k) => { const dir = k.split(":").slice(1).join(":").replace(/[^/]+$/, ""); return dir.length > 8 && n.includes(dir); })));
+    const asks = items.flatMap((o) => (o.cody || []).map((c) => c.ask));
+    const mins = items.reduce((n, o) => n + ((o.cody || []).reduce((a, c) => a + (c.min || 0), 0) || 2), 0) + keys.length;
+    // a lane with nothing left to run would never read the answer, so it goes to the lead instead
+    const to = l.live || l.queued ? l.lane : "LEAD";
+    const targets = [...items.map((o) => ({item: `open:${l.lane}:${o.job}`, kind: "open", m: to === "LEAD" ? stateM : l.m, lane: to, job: o.job})),
+      ...parkedHere.map((p) => ({item: `parked:${l.lane}:${p.j[1]}`, kind: "parked", m: to === "LEAD" ? stateM : l.m, lane: to, job: p.j[1]}))];
+    const block = unblocks.length > 0 || roadmap >= 0;
+    const when = Math.max(0, ...jobs.map((id) => at(l, id)));
+    add({id: `look:${l.lane}`, tier: block ? "block" : "review", l, m: l.m, lane: l.lane, targets, keys, items, parked: parkedHere,
+      title: asks.length ? asks[0] + (asks.length > 1 ? ` (+${asks.length - 1} more)` : "")
+        : `${keys.length ? "Look at" : "Review"} ${plain(l)}: ${jobs.join(", ")}`,
+      unblocks, roadmap: roadmap >= 0 ? roadmap + 1 : 0, mins, at: when,
+      score: (block ? 100 : 30) + 15 * unblocks.length + (roadmap >= 0 ? 25 : 0) + Math.min(24, (t0 - (when || t0)) / 3600),
+      reply: block ? "open" : "note"});
+  }
+  // parked jobs that wait on Cody with nothing to look at
+  for (const p of onCody.filter((p) => !p.grouped)) {
+    const item = `parked:${p.l.lane}:${p.j[1]}`;
+    if (dismissed(item)) continue;
+    add({id: item, tier: "block", l: p.l, m: p.l.m, lane: p.l.lane, targets: [{item, kind: "parked", m: p.l.m, lane: p.l.lane, job: p.j[1]}],
+      title: `${p.j[1]} is parked until you decide: ${first(p.j[4], 90)}`,
+      why: p.why, jobsShown: [p.j], unblocks: [p.j[1]], mins: 3, score: 95, reply: "open"});
+  }
+  // uploads waiting for a yes (merged with any session asking the same)
+  const latest = Object.entries(board).flatMap(([m, d]) => (d.rounds || []).map((r) => ({...r, m}))).sort((a, b) => b.at - a.at);
+  const uploads = uniq((latest[0]?.lines || []).filter((x) => x.startsWith("upload waiting")).map((x) => x.replace(/^upload waiting:?\s*/, "")));
+  const askUpload = sessions.find((s) => s.status === "idle" && /upload/i.test(s.ask || ""));
+  for (const u of uploads) {
+    const item = "upload:" + u.slice(0, 80);
+    if (dismissed(item)) continue;
+    add({id: item, tier: "block", m: stateM, title: "Say yes to uploading " + first(u.replace(/`/g, ""), 110), upload: u, session: askUpload,
+      targets: [lead(item, "upload")], mins: 1, at: latest[0].at, score: 120, reply: "upload"});
+  }
+  // a failed round with no landed round after it
+  if (latest[0] && !latest[0].ok && !dismissed(`round:${latest[0].n}`)) {
+    const [cause, fix] = causeOf(latest[0].tail);
+    add({id: `round:${latest[0].n}`, tier: "block", m: latest[0].m, title: `Round ${latest[0].n} did not land: ${cause}`, fix,
+      tail: latest[0].tail, targets: [lead(`round:${latest[0].n}`, "round")], mins: 2, at: latest[0].at, score: 110, reply: "lead"});
+  }
+  // lanes that stopped on their own
+  for (const l of lanes.filter((l) => !l.alive && /could not merge|runner error|nothing left to plan/.test(l.last || ""))) {
+    const t = (l.events || []).slice(-1)[0]?.[0] || 0;
+    const item = `stuck:${l.lane}:${t}`;
+    if (t0 - t > 12 * 3600 || dismissed(item)) continue;
+    add({id: item, tier: "block", l, m: l.m, lane: l.lane, title: `${l.lane} (${plain(l)}) stopped on its own`, why: l.last,
+      targets: [lead(item, "stuck")], mins: 2, at: t, score: 90, reply: "lead"});
+  }
+  // sessions actively waiting on Cody's answer
+  for (const s of sessions.filter((s) => s.status === "idle" && s.ask && s !== askUpload)) {
+    const item = `ask:${s.id}:${s.since}`;
+    if (dismissed(item)) continue;
+    add({id: item, tier: "block", m: s.m, title: `${s.name} asks: ${s.ask}`, session: s, targets: [lead(item, "dismiss")],
+      mins: 2, at: s.since, score: 130 + Math.min(24, (t0 - s.since) / 3600), reply: "session"});
+  }
+  // roadmap steps that are Cody's and no card above covers
+  (state?.next || []).forEach((n, i) => {
+    if (!/\bCody\b/.test(n) || todo.some((x) => x.roadmap === i + 1)) return;
+    const item = "next:" + n.slice(0, 60);
+    if (dismissed(item)) return;
+    const mine = n.split(/\s-\s|;\s/).find((p) => /\bCody\b/.test(p)) || n;  // the clause that is Cody's
+    add({id: item, tier: "review", m: stateM, title: `Roadmap step ${i + 1}: ${first(mine, 140)}`, text: n,
+      targets: [lead(item, "lead")], mins: 5, score: 40 - i, reply: "lead"});
+  });
+  // the lead's list (STATE: waiting on Cody), one card
+  const leadItems = (state?.cody || []).filter((c) => !dismissed(c.id) && !answerOf(c.id));
+  if (leadItems.length) add({id: "leadlist", tier: "later", m: stateM, title: `The lead's open calls (${leadItems.length}): looks and game calls from STATE`,
+    leadItems, targets: [], mins: leadItems.length, score: 5, reply: "leadlist"});
+
+  for (const x of todo) {
+    const as = x.targets.map((t) => answerOf(t.item)).filter(Boolean);
+    x.answered = x.targets.length > 0 && as.length >= x.targets.length && as.every((a) => a.kind !== "dismiss");
+    x.taken = x.answered && as.every((a) => taken.has(a.id));
+    x.answer = as.pop();
+  }
+  const open = todo.filter((x) => !x.answered).sort((a, b) => b.score - a.score);
+  const sent = todo.filter((x) => x.answered && !x.taken);
+
+  // ---- health ----
+  const issues = [];
+  const known = Object.keys(board);
+  for (const [k, name] of MACHINES) {
+    const d = board[k];
+    if (!d) issues.push({sev: "warn", who: k === "mac" ? "Ethan" : "you", text: `${name} isn't reporting, so its lanes are invisible here.`, fix: setupFix(k), blind: true});
+    else if (t0 - d.at > STALE) issues.push({sev: "bad", who: "you", text: `${name} has been silent for ${dur(t0 - d.at)}.`, fix: "It may be asleep, off the network, or its feed stopped.", blind: true});
+  }
+  for (const l of lanes.filter((l) => l.live)) {
+    const st = laneState(l);
+    const lastT = (l.events || []).slice(-1)[0]?.[0] || 0;
+    if (st === "limit" && lastT) {
+      const since = [...(l.events || [])].reverse().find((e) => !/usage limit|connection error/.test(e[1]));
+      issues.push({sev: "warn", who: "auto", text: `${l.lane} is at the usage limit${since ? " for " + dur(t0 - since[0]) : ""}.`, fix: "It retries every 15 minutes by itself."});
+    }
+    if (l.elapsed > Math.max(2 * l.avg, l.avg + 3600)) issues.push({sev: "warn", who: "you", text: `${l.job.id} on ${l.lane} has run ${dur(l.elapsed)}, over twice its lane's usual ${dur(l.avg)}.`,
+      fix: "It may be stuck. Its seat is killed at the job timeout; open its lane below to see its last message."});
+    for (const [t, text] of l.errors || []) issues.push({sev: "warn", who: "lead", text: `${l.lane}'s runner hit an error ${ago(t)}.`, pre: text});
+    for (const [t, msg] of l.events || []) if (/starting point already fails the check/.test(msg) && t0 - t < 12 * 3600)
+      issues.push({sev: "bad", who: "lead", text: "The main line already fails the check, so every seat starts from a failing build.", pre: msg});
+  }
+  const failedRuns = latest.slice(0, 4).filter((r) => !r.ok);
+  if (failedRuns.length >= 2) {
+    const [cause, fix] = causeOf(failedRuns[0].tail);
+    issues.push({sev: latest[0].ok ? "warn" : "bad", who: "lead", text: `${failedRuns.length} of the last ${Math.min(4, latest.length)} rounds failed${cause ? ": " + cause : ""}.`, fix});
+  }
+  const byLane = (list) => Object.entries(list.reduce((o, p) => ((o[p.l.lane] = o[p.l.lane] || []).push(p.j[1]), o), {})).map(([k, v]) => `${k}: ${v.join(", ")}`).join(" · ");
+  if (checkParked.length) issues.push({sev: "warn", who: "lead", text: `${checkParked.length} job${checkParked.length > 1 ? "s" : ""} parked by a failed check: ${byLane(checkParked)}.`,
+    fix: "The lead re-briefs or drops them; each one's reason is in its lane card.", pre: checkParked.map((p) => `${p.j[1]}: ${p.why}`).join("\n\n")});
+  for (const w of waits.filter((w) => w.refs.lanes.length || w.refs.jobs.length)) {
+    const down = w.refs.lanes.filter((x) => !lanes.some((l) => l.lane === x && l.live));
+    if (down.length && w.refs.lanes.length) issues.push({sev: "warn", who: "lead", text: `${w.j[1]} (${w.l.lane}) waits on ${down.join(", ")}, which ${down.length > 1 ? "aren't" : "isn't"} running on any machine that reports.`,
+      fix: known.length < MACHINES.length ? "It may run on a machine that isn't reporting." : "Nothing will free it until an orchestrator schedules that work."});
+  }
+  return {lanes, sessions, state, stateM, todo: open, sent, issues, waits, taken, latest, t0};
+}
+
+function setupFix(k) {  // [who runs it and where, the command]
+  if (k === "mac") return ["Ethan runs this once on the Mac (it installs a login item that keeps the feed running):", "bash scripts/mac_board_join.sh"];
+  return [`On ${label(k)}, in the checkout its lanes run from (the control id lets it take your answers):`,
+    `git pull --ff-only && echo ${k} > build/paths/MACHINE && mkdir -p ~/.config/agent-board && echo ${control} > ~/.config/agent-board/control && python scripts/status_push.py --stay`];
+}
+
+// ---- render ----
+function render() {
+  if (!control) {
+    $("top").innerHTML = '<p class="empty">Open the Control Centre from its private link (the part after # is your control id). This device remembers it after that.</p>';
+    return;
+  }
+  M = build();
+  $("stamp").textContent = fetchedAt ? clock(fetchedAt) : "loading…";
+  const block = M.todo.filter((x) => x.tier === "block");
+  document.title = (block.length ? `(${block.length}) ` : "") + "Control Centre";
+  notify(block);
+  const working = M.lanes.filter((l) => l.live).length + M.sessions.filter((s) => s.status === "busy").length;
+  $("nav").innerHTML = [["todo-h", "To do", M.todo.length, block.length > 0], ["now-h", "Now", working], ["next-h", "Coming up"],
+    ["health-h", "Health", M.issues.length, M.issues.some((i) => i.sev === "bad")], ["lanes-h", "Lanes"]]
+    .map(([id, t, n, hot]) => `<a href="#" data-go="${id}">${t}${n !== undefined ? `<span class="n${hot ? " hot" : ""}">${n}</span>` : ""}</a>`).join("");
+  renderTop(block, working);
+  renderSince();
+  renderTodo();
+  renderSpawn();
+  renderNow();
+  renderNext();
+  renderHealth();
+  renderLanes();
+}
+
+function nextEvent() {
+  const evs = [];
+  const r = nextRound();
+  if (r?.at) evs.push([r.at, `round ${r.n} ~${clock(r.at)}`]);
+  for (const l of M.lanes.filter((l) => l.curLeft)) evs.push([M.t0 + l.curLeft, `${l.job.id} done ~${clock(M.t0 + l.curLeft)}`]);
+  return evs.sort((a, b) => a[0] - b[0])[0]?.[1] || "";
+}
+
+function renderTop(block, working) {
+  const review = M.todo.length - block.length;
+  const mins = M.todo.filter((x) => x.tier !== "later").reduce((n, x) => n + (x.mins || 0), 0);
+  const waitingSessions = M.sessions.filter((s) => s.status === "idle" && s.ask).length;
+  const parts = [];
+  parts.push(block.length ? `<span class="bad">${block.length} need${block.length === 1 ? "s" : ""} you now</span>` : `<span class="ok">Nothing is blocked on you</span>`);
+  if (review) parts.push(`${review} when you can`);
+  if (mins) parts.push(`~${mins} min of yours`);
+  parts.push(`${working} agent${working === 1 ? "" : "s"} working`);
+  const nx = nextEvent();
+  const where = (M.state?.where || "").match(/[^.]+\./g) || [];  // whole sentences, up to ~200 characters
+  let ws = "";
+  for (const s of where) if (!ws || ws.length + s.length < 200) ws += s; else break;
+  const sub = [ws.trim(), nx ? "Next: " + nx : ""].filter(Boolean).join(" · ");
+  const blind = M.issues.filter((i) => i.blind);
+  $("top").innerHTML = `<div class="headline">${parts.join(" · ")}${waitingSessions ? ` · <span class="bad">${waitingSessions} session${waitingSessions > 1 ? "s" : ""} waiting on you</span>` : ""}
+    ${sub ? `<span class="sub">${esc(sub)}</span>` : ""}</div>
+    ${blind.length ? `<div class="blind"><b>Blind spots:</b> ${blind.map((i) => `<details class="more" style="margin:0"><summary>${esc(i.text)}</summary>
+      ${Array.isArray(i.fix) ? `<div class="hint">${esc(i.fix[0])}</div><span class="copy" title="Tap to copy">${esc(i.fix[1])}</span>` : `<div class="hint">${esc(i.fix)}</div>`}</details>`).join("")}</div>` : ""}`;
+}
+
+// what changed since Cody last said "got it"
+function seenNow() {
+  const done = {}, todo = {}, rounds = {}, alive = [];
+  for (const l of M.lanes) {
+    for (const j of l.jobs || []) if (j[0] === "x") done[j[1]] = `${j[1]} (${l.lane}): ${first(j[4], 90)}`;
+    if (l.live) alive.push(l.lane);
+  }
+  for (const x of M.todo) todo[x.id] = x.title;
+  for (const r of M.latest) rounds[r.n] = r.ok;
+  return {at: Math.floor(now()), done, todo, rounds, alive};
+}
+function renderSince() {
+  const cur = seenNow();
+  let seen = parse(store.get("cc.seen"), null);
+  if (!seen) { store.set("cc.seen", JSON.stringify(cur)); seen = cur; }
+  const lines = [];
+  for (const [id, t] of Object.entries(cur.rounds)) if (!(id in seen.rounds)) lines.push(t ? `<span class="ok">Round ${id} landed</span>` : `<span class="bad">Round ${id} did not land</span>`);
+  for (const [id, t] of Object.entries(cur.todo)) if (!(id in seen.todo)) lines.push(`<b>New for you:</b> ${esc(t)}`);
+  for (const [id, t] of Object.entries(seen.todo)) if (!(id in cur.todo)) lines.push(`<span class="hint">Off your list:</span> ${esc(t)}`);
+  for (const [id, t] of Object.entries(cur.done)) if (!(id in seen.done)) lines.push(`✓ Finished ${esc(t)}`);
+  for (const l of cur.alive) if (!seen.alive.includes(l)) lines.push(`${esc(l)} started`);
+  for (const l of seen.alive) if (!cur.alive.includes(l)) lines.push(`${esc(l)} stopped`);
+  $("since").innerHTML = lines.length ? `<section class="card since" style="margin-top:8px"><div class="acts" style="margin:0;justify-content:space-between">
+    <b>Since you last looked (${dur(now() - seen.at)} ago)</b><button class="btn" data-seen>Got it</button></div>
+    <ul>${lines.slice(0, 30).map((x) => `<li>${x}</li>`).join("")}</ul></section>` : "";
+}
+
+const openTodo = new Set(parse(store.get("cc.open"), []) || []);
+function renderTodo() {
+  const el = $("todo");
+  const focus = document.activeElement?.dataset?.draft;
+  const block = M.todo.filter((x) => x.tier === "block"), review = M.todo.filter((x) => x.tier === "review"), later = M.todo.filter((x) => x.tier === "later");
+  $("todoSub").textContent = M.todo.length ? `${block.length} blocking · ${review.length} when you can${later.length ? " · " + later.length + " later" : ""}` : "";
+  let n = 0;
+  const sec = (t, hint, list, cap = 99) => list.length ? `<h3>${t} <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">${hint}</span></h3>${list.slice(0, cap).map((x) => todoCard(x, ++n)).join("")}
+    ${list.length > cap ? `<details class="more"><summary>${list.length - cap} more, lower down the list</summary><div class="stack">${list.slice(cap).map((x) => todoCard(x, ++n)).join("")}</div></details>` : ""}` : "";
+  el.innerHTML = (M.todo.length ? sec("Blocking work", "an agent or a job is waiting for this", block)
+      + sec("When you can", "nothing waits, but a seat left you a call", review, 5) + sec("Later", "the lead's list", later)
+    : '<p class="card empty">Nothing needs you. Seats\' calls, parked jobs, uploads, failed rounds and sessions waiting on you show up here.</p>')
+    + (M.sent.length ? `<details class="more"><summary>Sent, on the way (${M.sent.length})</summary>${M.sent.map((x) =>
+      `<div class="card" style="margin-top:6px"><b>${esc(x.title)}</b><div class="sent">✓ Sent ${ago(x.answer?.at)}: “${esc((x.answer?.text || "").slice(0, 160))}”. Waiting for ${x.targets[0]?.lane === "LEAD" ? "the lead" : x.targets[0]?.lane} to take it.</div></div>`).join("")}</details>` : "");
+  if (focus) { const t = el.querySelector(`[data-draft="${CSS.escape(focus)}"]`); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+}
+
+function todoCard(x, n) {
+  const k = x.tier === "block" ? "--bad" : x.tier === "review" ? "--merge" : "--pause";
+  const chips = [];
+  if (x.m) chips.push(`<span class="chip m" style="--c:${color(x.m)}">${esc(label(x.m))}${x.lane ? " · " + esc(x.lane) : ""}</span>`);
+  if (x.unblocks?.length) chips.push(`<span class="chip hot">unblocks ${esc(x.unblocks.join(", "))}</span>`);
+  if (x.roadmap) chips.push(`<span class="chip hot">roadmap step ${x.roadmap}</span>`);
+  if (x.session) chips.push(`<span class="chip hot">a session is waiting</span>`);
+  if (x.mins) chips.push(`<span class="chip">~${x.mins} min</span>`);
+  if (x.at) chips.push(`<span class="chip">${ago(x.at)}</span>`);
+  const isOpen = openTodo.has(x.id) || (n === 1 && !openTodo.size);
+  return `<details class="card todo" style="--k:var(${k})" data-todo="${esc(x.id)}"${isOpen ? " open" : ""}>
+    <summary><span class="num">${n}</span><span class="tt"><b>${md(x.title)}</b><div class="chips">${chips.join("")}</div></span></summary>
+    <div class="body stack">${todoBody(x)}</div></details>`;
+}
+
+function memory(x) {  // what this is, in plain words, and what Cody said before
+  const lines = [], quotes = [];
+  const jobs = [...(x.items || []).map((o) => [o.job, o.role]), ...(x.parked || []).map((p) => [p.j[1], p.j[2]]), ...(x.jobsShown || []).map((j) => [j[1], j[2]])];
+  for (const [id, role] of jobs) {
+    const hit = x.l?.jobs?.find((j) => j[1] === id);
+    if (!hit) continue;
+    const parked = (x.parked || []).some((p) => p.j[1] === id);
+    lines.push(`<p><b>${esc(id)}</b> <span class="jmeta">${esc(role)}${parked ? " · parked, waiting for this" : ""}</span> — ${md(first(hit[4], 200))}</p>`);
+    quotes.push(...youSaid(hit[4]));
+  }
+  if (x.l) lines.unshift(`<p><b>${esc(x.l.lane)}</b> is ${esc(plain(x.l))}.</p>`);
+  const qs = uniq(quotes.map(([d, q]) => `${d ? d + ": " : ""}${q}`));
+  return lines.length || qs.length ? `<div class="mem">${lines.join("")}${qs.length ? `<p style="margin-top:6px"><b>You said</b></p>${qs.map((q) => `<p class="said">${esc(q)}</p>`).join("")}` : ""}</div>` : "";
+}
+
+function gallery(keys) {
+  if (!keys?.length) return "";
+  const shown = keys.filter((k) => imgs[k]);
+  const missing = keys.length - shown.length;
+  return `<div class="gallery">${shown.map((k) => `<figure><img src="${imgs[k]}" data-big="${esc(k)}" alt="${esc(k)}" loading="lazy"><figcaption>${esc(k.split("/").pop())}</figcaption></figure>`).join("")}</div>
+    ${missing ? `<div class="hint">${missing} more on ${esc(label("pc1"))}: ${esc(keys.filter((k) => !imgs[k]).map((k) => k.split(":").slice(1).join(":")).join(", "))}</div>` : ""}`;
+}
+
+function todoBody(x) {
+  const out = [];
+  if (x.reply === "leadlist") {
+    out.push(`<p class="hint" style="margin:0">From docs/STATE.md, "Waiting on Cody". Each answer goes to the lead, which acts on it at its next run.</p>`);
+    let group = "";
+    for (const c of x.leadItems) {
+      if (c.label !== group) { group = c.label; out.push(`<h3>${esc(group)}</h3>`); }
+      out.push(`<div class="row"><div class="main"><div class="l2">${md(c.text)}</div>
+        <details class="more"><summary>Answer</summary><textarea data-draft="${esc(c.id)}" placeholder="Your call…">${esc(drafts[c.id] || "")}</textarea>
+        <div class="acts"><button class="btn pri" data-send="${esc(c.id)}" data-kind="lead">Send to the lead</button><button class="btn" data-dismiss="${esc(c.id)}">Not now</button></div></details></div></div>`);
+    }
+    return out.join("");
+  }
+  out.push(memory(x));
+  if (x.session) {
+    const s = x.session;
+    out.push(`<div class="mem"><p><b>${esc(s.name)}</b> <span class="jmeta">${esc(label(s.m))} · waiting ${ago(s.since)}</span></p>
+      ${s.recap ? `<p>${md(s.recap)}</p>` : ""}${s.ask ? `<p><b>It asks:</b> ${md(s.ask)}</p>` : ""}</div>
+      ${s.said && x.reply === "session" ? `<details class="more"><summary>Its last message</summary><div class="calls">${md(s.said)}</div></details>` : ""}
+      <div class="acts">${sessionLinks(s, true)}</div>`);
+  }
+  if (x.keys) out.push(gallery(x.keys));
+  if (x.items) for (const o of x.items) {
+    out.push(`<div><div class="hint"><b>${esc(o.job)}</b> left you:</div>${(o.cody || []).length ? `<ul style="margin:4px 0;padding-left:18px">${o.cody.map((c) => `<li><b>${md(c.ask)}</b>${c.min ? ` <span class="hint">~${c.min} min</span>` : ""}</li>`).join("")}</ul>` : ""}
+      ${o.text ? `<div class="calls clamp" title="Tap to read it all">${md(o.text)}</div>` : ""}</div>`);
+  }
+  if (x.why) out.push(`<div><div class="hint"><b>Why</b></div><pre>${esc(x.why)}</pre></div>`);
+  if (x.upload) out.push(`<div class="calls">${md(x.upload)}</div><div class="hint">Uploads need your yes (CLAUDE.md). ${x.session ? `<b>${esc(x.session.name)}</b> is waiting for it now: say yes there, or approve here for the lead's next run.` : "Approving here hands it to the lead's next run."}</div>`);
+  if (x.fix) out.push(`<div class="hint"><b>Known fix:</b> ${esc(x.fix)}</div>`);
+  if (x.tail) out.push(`<details class="more"><summary>Log tail</summary><pre>${esc(x.tail)}</pre></details>`);
+  if (x.text && x.reply === "lead") out.push(`<div class="calls">${md(x.text)}</div>`);
+  out.push(actions(x));
+  return out.join("");
+}
+
+function actions(x) {
+  const id = esc(x.id);
+  let leadHint = x.targets[0]?.lane === "LEAD" ? (leadRunning() ? "The lead is running and takes it on its next look." : `No orchestrator is running, so this waits for the next one. <a href="#" data-go="now-h">Start one</a>.`) : "";
+  if (x.reply === "session") return `<div class="acts"><button class="btn" data-dismiss="${id}">Hide</button></div><div class="hint">Answer it in the session itself: the links open it on this device.</div>`;
+  if (x.reply === "upload") return `<div class="acts"><button class="btn pri" data-quick="${id}" data-text="Yes: upload these.">Yes, upload</button>
+    <button class="btn" data-dismiss="${id}">Not now</button></div><div class="hint">${leadHint}</div>`;
+  if (x.reply === "note") return `<div class="acts"><button class="btn pri" data-quick="${id}" data-text="Approved as is.">Approve as is</button>
+    <button class="btn" data-reveal="${id}">Add a note</button><button class="btn" data-dismiss="${id}">Dismiss</button></div>
+    <div data-noteof="${id}" ${drafts[x.id] ? "" : "hidden"}><textarea data-draft="${id}" placeholder="Your note for ${esc(x.lane)}'s next seat…">${esc(drafts[x.id] || "")}</textarea>
+    <div class="acts"><button class="btn pri" data-send="${id}">Send to ${esc(x.lane)}</button></div></div>
+    <div class="hint">Nothing is waiting on this. Your answer goes to ${esc(x.lane)}'s next seat and its planner.</div>`;
+  const to = x.targets[0]?.lane === "LEAD" ? "the lead" : x.lane;
+  if (x.lane && to === "the lead") leadHint = `${esc(x.lane)} has nothing left to run, so this goes to the lead. ` + leadHint;
+  const does = to === "the lead" ? leadHint : x.reply === "open" && x.parked?.length ? `Sending puts ${x.parked.map((p) => p.j[1]).join(", ")} back in ${x.lane}'s queue with your answer, and your answer goes to its next seat.`
+    : x.targets.some((t) => t.kind === "parked") ? "Sending puts the job back in its lane's queue with your answer added to its brief." : leadHint;
+  return `<textarea data-draft="${id}" placeholder="Your answer or direction…">${esc(drafts[x.id] || "")}</textarea>
+    <div class="acts">${x.reply === "open" ? `<button class="btn" data-quick="${id}" data-text="Approved as is; go ahead.">Approve as is</button>` : ""}
+    <button class="btn pri" data-send="${id}">Send to ${esc(to)}</button><button class="btn" data-dismiss="${id}">Dismiss</button></div>
+    <div class="hint">${does}</div>`;
+}
+
+function sessionLinks(s, big) {
+  const cls = big ? "btn pri" : "btn";
+  return [s.rc ? `<a class="${cls}" href="${esc(s.rc)}" target="_blank" rel="noopener">Open (phone or browser)</a>` : "",
+    s.app ? `<a class="btn" href="${esc(s.app)}">Open in the Claude app</a>` : ""].join("") || '<span class="hint">No link: Remote Control is off for this session.</span>';
+}
+const leadRunning = () => M.sessions.some((s) => s.status === "busy" && /orchestrat|lead|round/i.test(s.name));
+
+function renderSpawn() {
+  const pending = answers.filter((a) => a.kind === "spawn" && !M.taken.has(a.id) && now() - a.at < 600);
+  const machines = CONTROL_MACHINES.filter((k) => ctl[k]);
+  $("spawn").innerHTML = `<div class="spawn"><b style="flex:none">Start an orchestrator</b>
+      ${machines.length > 1 ? `<select id="spawnOn">${machines.map((k) => `<option value="${k}">${label(k)}</option>`).join("")}</select>` : `<span class="hint">on ${esc(label(machines[0] || "pc1"))}</span>`}</div>
+    <input type="text" id="spawnNote" data-draft="spawnNote" placeholder="Optional: what it should do first" value="${esc(drafts.spawnNote || "")}">
+    <div class="acts" style="margin-top:0">${["medium", "high", "xhigh"].map((e) => `<button class="btn${e === "high" ? " pri" : ""}" data-spawn="${e}">${e === "xhigh" ? "XHigh" : e[0].toUpperCase() + e.slice(1)}</button>`).join("")}
+      ${pending.length ? `<span class="hint">Starting ${pending.length}… (asked ${ago(pending[0].at)})</span>` : ""}</div>
+    <div class="hint">It starts on that PC within a minute as a background Claude session with Remote Control. It shows up under Now with a link, and it reads your new answers first.</div>`;
+}
+
+function renderNow() {
+  const rows = [];
+  const lanes = M.lanes.filter((l) => l.live).sort((a, b) => (b.dependents.length * 7200 + b.left) - (a.dependents.length * 7200 + a.left));
+  for (const l of lanes) {
+    const st = laneState(l);
+    const [name, svar, live] = STATE[st];
+    const j = l.job;
+    const stText = st === "limit" && /waiting (\d+) min/.test(l.last) ? `Usage limit · retry in ${l.last.match(/waiting (\d+) min/)[1]}m` : name;
+    const pct = l.elapsed ? Math.min(100, 100 * l.elapsed / l.avg) : 0;
+    const chips = [];
+    if (l.dependents.length) chips.push(`<span class="chip hot">${uniq(l.dependents).length} job${uniq(l.dependents).length > 1 ? "s" : ""} elsewhere wait on this</span>`);
+    if (l.left) chips.push(`<span class="chip">~${dur(l.left)} of work left · done ~${clock(l.endAt)}</span>`);
+    chips.push(`<span class="chip">${l.done}/${l.total} done${l.queued ? ` · ${l.queued} queued` : ""}${l.parked ? ` · ${l.parked} parked` : ""}</span>`);
+    rows.push(`<div class="row" style="--c:${color(l.m)}"><span class="tag">${esc(l.lane)}</span><div class="main">
+      <div class="l1"><b>${esc(plain(l))}</b><span class="pill${live ? " live" : ""}" style="--s:var(${svar})"><i></i>${esc(stText)}</span><span class="hint">${esc(label(l.m))}</span></div>
+      <div class="l2">${j && st !== "limit" ? `<b>${esc(j.id)}</b> ${esc(first(j.brief, 140))}` : esc(l.last || "")}</div>
+      ${l.elapsed ? `<div class="bar"><div class="track"><span class="${l.elapsed > l.avg ? "over" : "d"}" style="width:${pct.toFixed(0)}%"></span></div>${dur(l.elapsed)} of ~${dur(l.avg)}</div>` : ""}
+      <div class="chips">${chips.join("")}</div></div></div>`);
+  }
+  const busy = M.sessions.filter((s) => s.status === "busy").sort((a, b) => a.since - b.since);
+  for (const s of busy) rows.push(`<div class="row" style="--c:${color(s.m)}"><span class="tag">${s.kind === "background" ? "BG" : "S"}</span><div class="main">
+    <div class="l1"><b>${esc(s.name)}</b><span class="pill live" style="--s:var(--run)"><i></i>Working ${dur(M.t0 - s.since)}</span><span class="hint">${esc(label(s.m))}</span></div>
+    ${s.said ? `<div class="l2 hint">${esc(first(s.said.split("\n").pop() || s.said, 180))}</div>` : ""}
+    <div class="acts" style="margin-top:4px">${sessionLinks(s)}</div></div></div>`);
+  const waiting = M.sessions.filter((s) => s.status === "idle" && s.ask);
+  for (const s of waiting) rows.unshift(`<div class="row" style="--c:${color(s.m)}"><span class="tag">S</span><div class="main">
+    <div class="l1"><b>${esc(s.name)}</b><span class="pill" style="--s:var(--bad)"><i></i>Waiting on you ${dur(M.t0 - s.since)}</span></div>
+    <div class="l2"><b>Asks:</b> ${md(s.ask)}</div><div class="acts" style="margin-top:4px">${sessionLinks(s, true)}</div></div></div>`);
+  const idle = M.sessions.filter((s) => s.status !== "busy" && !s.ask).sort((a, b) => b.since - a.since);
+  $("now").innerHTML = (rows.join("") || '<p class="empty" style="padding:6px">No agent is working right now.</p>')
+    + (idle.length ? `<details class="more" style="margin-top:6px"><summary>Idle sessions, done and not waiting on you (${idle.length})</summary>${idle.map((s) =>
+      `<div class="row"><div class="main"><div class="l1"><b>${esc(s.name)}</b><span class="hint">idle ${ago(s.since)} · ${esc(label(s.m))}</span></div>
+      ${s.recap ? `<div class="l2 hint">${esc(first(s.recap, 220))}</div>` : ""}<div class="acts" style="margin-top:4px">${sessionLinks(s)}</div></div></div>`).join("")}</details>` : "");
+}
+
+function nextRound() {
+  const merge = M.lanes.find((l) => l.live && (l.events || []).some((e) => /merging every lane/.test(e[1])));
+  if (!merge) return null;
+  const ts = merge.events.filter((e) => /merging every lane/.test(e[1])).map((e) => e[0]);
+  const gap = ts.length > 1 ? ts[ts.length - 1] - ts[ts.length - 2] : 3600;
+  const n = +(merge.events.filter((e) => /merging every lane \(round (\d+)\)/.test(e[1])).pop()?.[1].match(/round (\d+)/)[1] || 0) + 1;
+  return {lane: merge.lane, at: ts[ts.length - 1] + gap, n};
+}
+
+function renderNext() {
+  const out = [];
+  const r = nextRound();
+  const last = M.latest[0];
+  out.push(`<h3 style="margin-top:0">Next round</h3><div class="l2">${r ? `Round ${r.n} ~${clock(r.at)} (in ${dur(r.at - M.t0)}), from ${esc(r.lane)}'s timer.`
+    : "No merge lane is running: a round happens when an orchestrator runs one."}
+    ${last ? ` Last: round ${last.n} <span class="${last.ok ? "ok" : "bad"}">${last.ok ? "landed" : "did not land"}</span> ${ago(last.at)}.` : ""}</div>`);
+  const ups = M.lanes.filter((l) => l.live && l.queued).sort((a, b) => a.curLeft - b.curLeft);
+  if (ups.length) out.push(`<h3>Next jobs</h3>${ups.map((l) => {
+    const nx = (l.jobs || []).filter((j) => j[0] === " " && !(l.job && j[1] === l.job.id)).slice(0, 2);
+    return `<div class="row" style="--c:${color(l.m)}"><span class="tag">${esc(l.lane)}</span><div class="main">${nx.map((j, i) =>
+      `<div class="l2"><b>${esc(j[1])}</b> <span class="jmeta">${esc(j[2])} · ${i === 0 ? (l.curLeft ? "starts ~" + clock(M.t0 + l.curLeft) : "starting") : "after that"}</span> ${esc(first(j[4], 120))}</div>`).join("")}</div></div>`;
+  }).join("")}`);
+  const chained = M.waits.filter((w) => w.refs.lanes.length || w.refs.jobs.length);
+  const backlog = M.waits.filter((w) => !chained.includes(w));
+  if (chained.length) out.push(`<h3>Waiting on other agents, not on you</h3>${chained.map((w) => {
+    const on = [...w.refs.lanes, ...w.refs.jobs.filter((id) => !w.refs.lanes.includes(id.split("-")[0]))];
+    const st = on.map((x) => { const l = M.lanes.find((y) => y.lane === x || y.lane === x.split("-")[0]);
+      return `${esc(x)} ${l?.live ? `<span class="ok">running${l.endAt ? ", done ~" + clock(l.endAt) : ""}</span>` : `<span class="bad">not running</span>`}`; });
+    return `<div class="row" style="--c:${color(w.l.m)}"><span class="tag">${esc(w.l.lane)}</span><div class="main"><div class="l2"><b>${esc(w.j[1])}</b> ${esc(first(w.j[4], 100))}</div>
+      <div class="hint">Waits on ${st.join(" · ") || esc(w.why)}</div></div></div>`;
+  }).join("")}`);
+  if (backlog.length) {
+    const lanesOf = uniq(backlog.map((w) => w.l.lane));
+    out.push(`<details class="more"><summary>Backlog: ${backlog.length} jobs parked by hand with no reason, on ${lanesOf.join(", ")}</summary>
+      <div class="hint">Nothing runs them until an orchestrator re-plans those lanes.</div>${backlog.map((w) => `<div class="l2"><b>${esc(w.j[1])}</b> ${esc(first(w.j[4], 110))}</div>`).join("")}</details>`);
+  }
+  if (M.state) out.push(`<h3>Where the project stands</h3><div class="l2">${md(M.state.where)}</div>
+    ${M.state.flight ? `<details class="more"><summary>In flight</summary><div class="calls">${md(M.state.flight)}</div></details>` : ""}
+    ${M.state.next?.length ? `<div class="hint" style="margin-top:8px"><b>The roadmap's next steps</b> (STATE, ${ago(M.state.at)})</div><ol class="plain">${M.state.next.map((n) => `<li>${md(n)}</li>`).join("")}</ol>` : ""}`);
+  $("next").innerHTML = out.join("");
+}
+
+function renderHealth() {
+  const out = [];
+  const iss = M.issues.filter((i) => !i.blind);
+  out.push(iss.length ? iss.map((i) => `<div class="issue" style="--k:var(${i.sev === "bad" ? "--bad" : "--limit"})"><span class="sev"></span><div style="min-width:0">
+    <div class="who">${i.who === "you" ? "Needs you" : i.who === "auto" ? "Sorts itself out" : "For the lead"}</div><div>${esc(i.text)}</div>
+    ${i.fix ? `<div class="hint">${esc(i.fix)}</div>` : ""}${i.pre ? `<details class="more"><summary>Details</summary><pre>${esc(i.pre)}</pre></details>` : ""}</div></div>`).join("")
+    : '<div class="ok" style="padding:4px 0">No problems found: every reporting lane is moving, and no round is failing.</div>');
+  // spend: seat runs only (claude -p reports API-equivalent dollars); Cody's own sessions aren't counted
+  const mid = new Date(); mid.setHours(0, 0, 0, 0);
+  const t0 = mid.getTime() / 1000, day = M.t0 - 86400;
+  const rows = {};
+  let today = 0, last24 = 0;
+  const jobsToday = [];
+  for (const [m, c] of Object.entries(ctl)) for (const [lane, runs] of Object.entries(c.cost || {})) for (const [job, end, usd] of runs) {
+    if (end >= day) last24 += usd;
+    if (end < t0) continue;
+    today += usd; rows[lane] = (rows[lane] || 0) + usd; jobsToday.push([job, lane, usd]);
+  }
+  const top = jobsToday.sort((a, b) => b[2] - a[2]).slice(0, 3);
+  const max = Math.max(1, ...Object.values(rows));
+  out.push(`<h3>Spend</h3><div class="l2"><b>$${today.toFixed(0)}</b> today · $${last24.toFixed(0)} in the last 24 hours <span class="hint">(seat runs, API-equivalent; your own sessions aren't counted)</span></div>
+    ${Object.keys(rows).length ? `<table class="spend">${Object.entries(rows).sort((a, b) => b[1] - a[1]).map(([lane, v]) => `<tr><td>${esc(lane)}</td><td style="width:60%"><div class="track" style="max-width:none"><span class="d" style="--c:var(--merge);width:${(100 * v / max).toFixed(0)}%"></span></div></td><td class="v">$${v.toFixed(2)}</td></tr>`).join("")}</table>
+    <div class="hint">Most today: ${top.map(([j, l, v]) => `${esc(j)} $${v.toFixed(2)}`).join(" · ")}</div>` : ""}`);
+  $("health").innerHTML = out.join("");
+}
+
+function renderLanes() {
+  const shown = M.lanes.filter((l) => l.live || M.t0 - ((l.events || []).slice(-1)[0]?.[0] || l.commit?.[0] || 0) < 12 * 3600);
+  const active = shown.filter((l) => l.live), quiet = shown.filter((l) => !l.live);
+  const rounds = M.latest.slice(0, 4);
+  $("lanes").innerHTML = `<div class="grid">${active.map(card).join("")}</div>
+    ${quiet.length ? `<details class="more"><summary>Stopped in the last 12 hours (${quiet.length})</summary><div class="grid">${quiet.map(card).join("")}</div></details>` : ""}
+    ${rounds.length ? `<details class="more"><summary>The last ${rounds.length} rounds</summary><div class="grid">${rounds.map(roundCard).join("")}</div></details>` : ""}`;
+}
+
+function roundCard(r) {
+  const get = (p) => r.lines.filter((l) => l.startsWith(p)).map((l) => l.slice(p.length + 1).trim());
+  const merged = get("merged")[0] || "";
+  return `<section class="card lane" style="--c:${color(r.m)}"><div class="l1"><b>Round ${r.n}</b> <span class="${r.ok ? "ok" : "bad"}">${r.ok ? "landed" : "did not land"}</span> <span class="hint">${ago(r.at)}</span></div>
+    <div class="hint">${merged ? merged.split(",").length : 0} branches merged · ${r.folded} notes folded${r.ok ? "" : " · " + esc(causeOf(r.tail)[0])}</div>
+    ${["check.sh", "smoke", "sent back"].flatMap((p) => get(p).map((v) => `<div class="l2"><b>${esc(p)}</b> ${esc(v)}</div>`)).join("")}
+    ${merged ? `<details class="more"><summary>Merged branches</summary><div class="hint">${esc(merged)}</div></details>` : ""}
+    ${r.tail ? `<details class="more"><summary>Log tail</summary><pre>${esc(r.tail)}</pre></details>` : ""}</section>`;
+}
+
+function card(l) {
+  const st = laneState(l);
+  const [name, svar, live] = STATE[st];
+  const j = l.job;
+  const row = ([s, id, role, effort, brief]) => {
+    const cur = j && id === j.id && l.live;
+    const k = s === "x" ? "✓" : s === "!" ? "⚠" : cur ? "●" : "○";
+    return `<li><span class="k">${k}</span><span><b>${esc(id)}</b> <span class="jmeta">${esc(role)} · ${esc(effort)}</span><br><span class="brief clamp">${esc(brief)}</span></span></li>`;
+  };
+  const jobs = l.jobs || [];
+  const next = jobs.filter((x) => x[0] === " " && !(j && x[1] === j.id && l.live));
+  const done = jobs.filter((x) => x[0] !== " ").reverse();
+  const events = (l.events || []).slice().reverse().map(([t, msg]) => `<li><span class="t">${clock(t)}</span><span>${esc(msg)}</span></li>`).join("");
+  return `<section class="card lane" style="--c:${color(l.m)}">
+    <div class="l1"><span class="chip m" style="--c:${color(l.m)}">${esc(l.lane)}</span><b style="flex:1;min-width:0">${esc(plain(l))}</b>
+      <span class="pill${live && l.live ? " live" : ""}" style="--s:var(${svar})"><i></i>${esc(l.stale ? "Machine offline" : name)}</span></div>
+    ${j && l.live ? `<div class="l2" style="margin-top:6px"><b>${esc(j.id)}</b> <span class="jmeta">${esc([j.role, j.effort].filter(Boolean).join(" · "))}${l.since && !j.finished ? " · for " + dur(M.t0 - l.since) : ""}</span>
+      ${j.brief ? `<div class="brief clamp">${esc(j.brief)}</div>` : ""}</div>` : ""}
+    ${l.last ? `<pre style="margin-top:6px">${esc(l.last)}</pre>` : ""}
+    <div class="hint">${l.done}/${l.total} done${l.parked ? ` · <span class="bad">${l.parked} parked</span>` : ""}${l.commit ? " · last commit " + ago(l.commit[0]) : ""}</div>
+    ${next.length ? `<details class="more"${l.live ? " open" : ""}><summary>Up next (${next.length})</summary><ol class="jobs">${next.map(row).join("")}</ol></details>` : ""}
+    ${done.length ? `<details class="more"><summary>Done and parked (${done.length})</summary><ol class="jobs">${done.map(row).join("")}</ol></details>` : ""}
+    ${events ? `<details class="more"><summary>Messages</summary><ol class="jobs">${events}</ol></details>` : ""}
+  </section>`;
+}
+
+// ---- alerts on this device ----
+let alerted = null;
+function notify(block) {
+  const ids = new Set(block.map((x) => x.id));
+  if (alerted && document.hidden && "Notification" in window && Notification.permission === "granted") {
+    for (const x of block) if (!alerted.has(x.id)) try { new Notification("Needs you: " + x.title.slice(0, 120), {tag: x.id}); } catch {}
+  }
+  alerted = ids;
+}
+$("bellBtn").addEventListener("click", async () => {
+  if (!("Notification" in window)) return alert("This browser can't show alerts. Use the ntfy topic (🔑) for phone pushes.");
+  const p = await Notification.requestPermission();
+  $("bellBtn").textContent = p === "granted" ? "🔔" : "🔕";
+});
+
+// ---- answering: one PATCH of answers.json in the control gist ----
+async function writeAnswers(list) {
+  if (!key) { openKey(); return false; }
+  const headers = {Authorization: "token " + key, Accept: "application/vnd.github+json"};
+  const r = await fetch("https://api.github.com/gists/" + control, {cache: "no-cache", headers});
+  if (!r.ok) throw new Error(r.status === 401 ? "the saved token was refused" : "GitHub answered " + r.status);
+  const g = await r.json();
+  const f = g.files["answers.json"];
+  let cur = parse(f?.truncated ? await (await fetch(f.raw_url)).text() : f?.content || "[]", []) || [];
+  const t = Math.floor(now());
+  cur = [...cur, ...list.map((a, i) => ({id: `${a.item}@${Date.now()}.${i}`, at: t, ...a}))].slice(-500);
+  const w = await fetch("https://api.github.com/gists/" + control, {method: "PATCH", headers,
+    body: JSON.stringify({files: {"answers.json": {content: JSON.stringify(cur)}}})});
+  if (!w.ok) throw new Error(w.status === 404 || w.status === 403 ? "the token can't write the control gist (is it etheydoc's, with the gist scope?)" : "GitHub answered " + w.status);
+  answers = cur;
+  return true;
+}
+const findTodo = (id) => M.todo.find((x) => x.id === id) || M.sent.find((x) => x.id === id);
+
+document.addEventListener("input", (e) => { if (e.target.dataset.draft) drafts[e.target.dataset.draft] = e.target.value; });
+document.addEventListener("toggle", (e) => {
+  const id = e.target.dataset?.todo;
+  if (!id) return;
+  e.target.open ? openTodo.add(id) : openTodo.delete(id);
+  store.set("cc.open", JSON.stringify([...openTodo]));
+}, true);
+document.addEventListener("click", async (e) => {
+  const go = e.target.closest("[data-go]");
+  if (go) { e.preventDefault(); $(go.dataset.go).scrollIntoView({behavior: "smooth"}); return; }
+  const big = e.target.closest("[data-big]");
+  if (big) { $("imgBig").src = imgs[big.dataset.big]; $("imgCap").textContent = big.dataset.big; $("imgDlg").showModal(); return; }
+  const cp = e.target.closest(".copy");
+  if (cp) { navigator.clipboard?.writeText(cp.textContent); cp.style.outline = "2px solid var(--ok)"; return; }
+  if (e.target.closest("[data-seen]")) { store.set("cc.seen", JSON.stringify(seenNow())); renderSince(); return; }
+  const clamp = e.target.closest(".clamp");
+  if (clamp) { clamp.classList.remove("clamp"); return; }
+  const rev = e.target.closest("[data-reveal]");
+  if (rev) { const box = document.querySelector(`[data-noteof="${CSS.escape(rev.dataset.reveal)}"]`); box.hidden = false; box.querySelector("textarea").focus(); return; }
+  const btn = e.target.closest("[data-send],[data-quick],[data-dismiss],[data-spawn]");
+  if (!btn) return;
+  let list = [];
+  if (btn.dataset.spawn) {
+    const on = $("spawnOn")?.value || CONTROL_MACHINES.find((k) => ctl[k]) || "pc1";
+    list = [{item: "spawn:" + btn.dataset.spawn, kind: "spawn", effort: btn.dataset.spawn, m: on, lane: "LEAD", job: "", text: (drafts.spawnNote || "").trim()}];
+  } else {
+    const id = btn.dataset.send || btn.dataset.quick || btn.dataset.dismiss;
+    const text = btn.dataset.quick ? btn.dataset.text : btn.dataset.send ? (drafts[id] || "").trim() : "";
+    if (btn.dataset.send && !text) return;
+    const x = findTodo(id);
+    if (x?.targets?.length) list = x.targets.map((t) => ({...t, kind: btn.dataset.dismiss ? "dismiss" : t.kind, text}));
+    else if (btn.dataset.kind === "lead" || id.startsWith("lead:")) list = [{item: id, kind: btn.dataset.dismiss ? "dismiss" : "lead", m: M.stateM, lane: "LEAD", job: "", text}];
+    else list = [{item: id, kind: "dismiss", text: ""}];
+    if (btn.dataset.dismiss && x?.reply === "session") list = [{item: id, kind: "dismiss", m: x.m, lane: "LEAD", job: "", text: ""}];
+  }
+  btn.disabled = true;
+  try {
+    if (await writeAnswers(list)) {
+      for (const a of list) delete drafts[a.item];
+      if (btn.dataset.spawn) delete drafts.spawnNote;
+      delete drafts[btn.dataset.send || btn.dataset.quick];
+      render();
+    }
+  } catch (err) {
+    $("err").textContent = "Couldn't send: " + err.message; $("err").hidden = false;
+  }
+  btn.disabled = false;
+});
+
+function openKey() { $("keyIn").value = ""; $("keyMsg").textContent = key ? "A token is saved." : ""; $("keyDlg").showModal(); }
+$("keyBtn").addEventListener("click", openKey);
+$("keyClose").addEventListener("click", () => $("keyDlg").close());
+$("keyClear").addEventListener("click", () => { key = ""; store.set("board.key", ""); $("keyMsg").textContent = "Forgotten."; });
+$("keySave").addEventListener("click", async () => {
+  const k = $("keyIn").value.trim();
+  if (!k) return;
+  $("keyMsg").textContent = "Checking…";
+  const r = await fetch("https://api.github.com/gists/" + control, {headers: {Authorization: "token " + k}}).catch(() => null);
+  const scopes = r?.headers.get("x-oauth-scopes") || "";
+  if (!r?.ok) { $("keyMsg").textContent = "GitHub refused that token."; return; }
+  if (scopes && !/\bgist\b/.test(scopes)) { $("keyMsg").textContent = "That token lacks the gist scope."; return; }
+  key = k; store.set("board.key", k); $("keyMsg").textContent = "Saved. You can answer now.";
+  setTimeout(() => $("keyDlg").close(), 900);
+  load(); schedule();
+});
+
+$("refresh").addEventListener("click", load);
+const POLL = () => key ? 30 : 90;  // without a token GitHub allows 60 calls an hour, and each look reads two gists
+let timer;
+function schedule() { clearInterval(timer); if (!document.hidden) timer = setInterval(() => { if (!document.activeElement?.dataset?.draft) load(); }, POLL() * 1000); }
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); schedule(); });
+setInterval(() => { if (!document.hidden && !document.activeElement?.dataset?.draft) render(); }, 30000);
+if (!key && control) setTimeout(() => { if (!key) openKey(); }, 1500);
+load(); schedule();
+</script>
+</body>
+</html>
