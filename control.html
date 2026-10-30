@@ -62,7 +62,7 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .todo .num{color:#0f1115}}
 :root[data-theme="dark"] .todo .num{color:#0f1115}
 .todo .tt{flex:1;min-width:0}
-.todo .tt b{font-weight:650}
+.todo .tt b{font-weight:650;overflow-wrap:anywhere}
 .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
 .chip{font-size:12px;font-weight:600;border-radius:6px;padding:1px 7px;background:var(--soft);color:var(--muted);white-space:nowrap}
 .chip.hot{background:var(--bad);color:#fff}
@@ -188,6 +188,10 @@ dialog p,dialog li{font-size:14px}
     <button class="btn" id="keyClose">Close</button>
     <span class="hint" id="keyMsg"></span>
   </div>
+  <h3 style="margin-top:16px">Your weekly cap</h3>
+  <p class="hint" style="margin-top:0">In seat dollars (API-equivalent): roughly what the seats had spent over the 7 days before you last hit
+    the weekly limit. Left empty, the page infers it from the next usage-limit stop.</p>
+  <div class="acts"><input id="capIn" type="text" inputmode="decimal" placeholder="e.g. 1200" style="width:140px"><button class="btn" id="capSave">Save cap</button></div>
   <p class="hint">Phone pushes even with this page closed: put an <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a>
     topic name in <code>~/.config/agent-board/ntfy</code> on PC 1 and subscribe to it in the ntfy app.</p>
 </dialog>
@@ -546,6 +550,8 @@ function renderTop(block, working) {
   if (review) parts.push(`${review} when you can`);
   if (mins) parts.push(`~${mins} min of yours`);
   parts.push(`${working} agent${working === 1 ? "" : "s"} working`);
+  const w = week();
+  if (w.cap) parts.push(`<span class="${w.pct > 0.85 ? "bad" : ""}">week ${Math.round(100 * w.pct)}% used</span>`);
   const nx = nextEvent();
   const where = (M.state?.where || "").match(/[^.]+\./g) || [];  // whole sentences, up to ~200 characters
   let ws = "";
@@ -683,7 +689,7 @@ function actions(x) {
     <button class="btn" data-dismiss="${id}">Not now</button></div><div class="hint">${leadHint}</div>`;
   if (x.reply === "note") return `<div class="acts"><button class="btn pri" data-quick="${id}" data-text="Approved as is.">Approve as is</button>
     <button class="btn" data-reveal="${id}">Add a note</button><button class="btn" data-dismiss="${id}">Dismiss</button></div>
-    <div data-noteof="${id}" ${drafts[x.id] ? "" : "hidden"}><textarea data-draft="${id}" placeholder="Your note for ${esc(x.lane)}'s next seat…">${esc(drafts[x.id] || "")}</textarea>
+    <div data-noteof="${id}" ${drafts[x.id] ? "" : "hidden"}>${changeCost(x)}<textarea data-draft="${id}" placeholder="Your note for ${esc(x.lane)}'s next seat…">${esc(drafts[x.id] || "")}</textarea>
     <div class="acts"><button class="btn pri" data-send="${id}">Send to ${esc(x.lane)}</button></div></div>
     <div class="hint">Nothing is waiting on this. Your answer goes to ${esc(x.lane)}'s next seat and its planner.</div>`;
   const to = x.targets[0]?.lane === "LEAD" ? "the lead" : x.lane;
@@ -692,7 +698,7 @@ function actions(x) {
     const frees = x.parked?.length ? ` ${x.parked.map((p) => p.j[1]).join(" and ")} go${x.parked.length > 1 ? "" : "es"} back in ${esc(x.lane)}'s queue.` : "";
     return `<div class="acts"><button class="btn pri" data-quick="${id}" data-text="Approved as is; go ahead.">Looks good: approve</button>
       <button class="btn" data-reveal="${id}">Change something</button><button class="btn" data-dismiss="${id}">Dismiss</button></div>
-      <div data-noteof="${id}" ${drafts[x.id] ? "" : "hidden"}><textarea data-draft="${id}" placeholder="What to change, e.g. “gable roof, not eave-front; darker rope”">${esc(drafts[x.id] || "")}</textarea>
+      <div data-noteof="${id}" ${drafts[x.id] ? "" : "hidden"}>${changeCost(x)}<textarea data-draft="${id}" placeholder="What to change, e.g. “gable roof, not eave-front; darker rope”">${esc(drafts[x.id] || "")}</textarea>
       <div class="acts"><button class="btn pri" data-send="${id}">Send to ${esc(to)}</button></div></div>
       <div class="hint">${to === "the lead" ? leadHint : `Either way, ${esc(x.lane)}'s next seat gets your answer.${frees}`}</div>`;
   }
@@ -702,6 +708,49 @@ function actions(x) {
     <div class="acts">${x.reply === "open" ? `<button class="btn" data-quick="${id}" data-text="Approved as is; go ahead.">Approve as is</button>` : ""}
     <button class="btn pri" data-send="${id}">Send to ${esc(to)}</button><button class="btn" data-dismiss="${id}">Dismiss</button></div>
     <div class="hint">${does}</div>`;
+}
+
+// ---- weekly usage, the real limit ----
+function week() {
+  const spend = Object.values(ctl).flatMap((c) => c.spend || []);
+  const hits = Object.values(ctl).flatMap((c) => c.limits || []).sort((a, b) => a - b);
+  const t = now(), sum = (f) => spend.filter(([e]) => f(e)).reduce((n, [, usd]) => n + usd, 0);
+  const used = sum((e) => e > t - 7 * 86400), day = sum((e) => e > t - 86400);
+  let cap = +store.get("cc.cap") || 0, capFrom = cap ? "the cap you set" : "";
+  if (!cap && hits.length) {  // what the seats had spent in the week before the latest stop on the limit
+    const h = hits[hits.length - 1];
+    cap = sum((e) => e > h - 7 * 86400 && e <= h);
+    capFrom = "inferred from the usage-limit stop " + ago(h);
+  }
+  const left = cap ? (cap - used) / Math.max(day / 86400, 1e-6) : 0;
+  return {used, day, cap, capFrom, pct: cap ? used / cap : 0, hitAt: cap && day ? t + left : 0};
+}
+const pctOf = (usd) => { const w = week(); return w.cap ? ` ≈ ${(100 * usd / w.cap).toFixed(usd / w.cap < 0.01 ? 1 : 0)}% of your week` : ""; };
+
+// what a change costs: the lane's own jobs of that role (else the role's anywhere), merged per job
+function jobCosts(l, roles) {
+  const role = {}, cost = {};
+  for (const x of M.lanes) for (const j of x.jobs || []) role[j[1]] = j[2];
+  for (const c of Object.values(ctl)) for (const [lane, rs] of Object.entries(c.cost || {})) for (const [job, , usd] of rs)
+    if (/^[A-Z]\d+-\d+$/.test(job) && usd) cost[job] = (cost[job] || 0) + usd;
+  const pick = (f) => Object.entries(cost).filter(([j]) => f(j)).map(([, v]) => v).sort((a, b) => a - b);
+  let xs = pick((j) => j.startsWith(l.lane + "-") && roles.includes(role[j])), where = `${l.lane} ${roles[0]}`;
+  if (xs.length < 2) { xs = pick((j) => roles.includes(role[j])); where = roles[0]; }
+  if (xs.length < 2) { xs = pick((j) => j.startsWith(l.lane + "-")); where = l.lane; }
+  return xs.length ? {med: xs[Math.floor(xs.length / 2)], min: xs[0], n: xs.length, where} : null;
+}
+function changeCost(x) {
+  if (!x.l) return "";
+  const ids = (x.items || []).map((o) => o.job);
+  const rides = uniq([...(x.parked || []).map((p) => p.j[1]),
+    ...(x.l.jobs || []).filter((j) => j[0] !== "x" && !(x.l.live && x.l.job?.id === j[1]) && ids.some((id) => (j[4] || "").includes(id))).map((j) => j[1])]);
+  const c = jobCosts(x.l, uniq((x.items || []).map((o) => o.role)));
+  const out = [];
+  out.push(rides.length ? `<b>Cheapest:</b> your note goes into ${rides.join(", ").replace(/, ([^,]*)$/, " and $1")}, which run anyway, so a change they can make in passing costs little extra.`
+    : x.l.live || x.l.queued ? `<b>Cheapest:</b> your note rides on ${esc(x.l.lane)}'s next job, which runs anyway.`
+    : `${esc(x.l.lane)} has nothing queued, so a change means a new pass that the lead schedules.`);
+  if (c) out.push(`<b>A pass of its own</b> (a rework of finished pieces): a ${esc(c.where)} job costs ~$${c.med.toFixed(0)}${pctOf(c.med)} (typical of ${c.n}; cheapest $${c.min.toFixed(0)}).`);
+  return `<div class="mem" style="margin-top:8px">${out.map((s) => `<p>${s}</p>`).join("")}<p class="hint">Seat runs only, API-equivalent dollars.${week().cap ? "" : " Set your weekly cap under 🔑 to see this as a share of your week."}</p></div>`;
 }
 
 // buttons to every job a piece of text names: to its to-do card if one covers it, else to its lane's card
@@ -838,7 +887,12 @@ function renderHealth() {
   }
   const top = jobsToday.sort((a, b) => b[2] - a[2]).slice(0, 3);
   const max = Math.max(1, ...Object.values(rows));
-  out.push(`<h3>Spend</h3><div class="l2"><b>$${today.toFixed(0)}</b> today · $${last24.toFixed(0)} in the last 24 hours <span class="hint">(seat runs, API-equivalent; your own sessions aren't counted)</span></div>
+  const w = week();
+  out.push(`<h3>Your weekly usage</h3><div class="l2">${w.cap ? `<b>${Math.round(100 * w.pct)}%</b> of your week used by seats ($${w.used.toFixed(0)} of ~$${w.cap.toFixed(0)}, ${esc(w.capFrom)}).
+      ${w.hitAt ? ` At the last 24 hours' pace ($${w.day.toFixed(0)}/day) you reach the limit <b class="${w.hitAt - M.t0 < 2 * 86400 ? "bad" : ""}">${w.hitAt - M.t0 < 7 * 86400 ? "~" + new Date(w.hitAt * 1000).toLocaleString([], {weekday: "short", hour: "numeric"}) : "not this week"}</b>.` : ""}
+      <div class="bar"><div class="track" style="max-width:none"><span class="${w.pct > 0.85 ? "over" : "d"}" style="--c:var(--merge);width:${Math.min(100, 100 * w.pct).toFixed(0)}%"></span></div></div>`
+    : `Seats used <b>$${w.used.toFixed(0)}</b> in the last 7 days ($${w.day.toFixed(0)} in the last 24 hours). <span class="hint">No usage-limit stop is on record to set your cap from: set it once under 🔑 to see this as a share of your week.</span>`}</div>
+    <h3>Spend</h3><div class="l2"><b>$${today.toFixed(0)}</b> today · $${last24.toFixed(0)} in the last 24 hours <span class="hint">(seat runs, API-equivalent; your own sessions aren't counted)</span></div>
     ${Object.keys(rows).length ? `<table class="spend">${Object.entries(rows).sort((a, b) => b[1] - a[1]).map(([lane, v]) => `<tr><td>${esc(lane)}</td><td style="width:60%"><div class="track" style="max-width:none"><span class="d" style="--c:var(--merge);width:${(100 * v / max).toFixed(0)}%"></span></div></td><td class="v">$${v.toFixed(2)}</td></tr>`).join("")}</table>
     <div class="hint">Most today: ${top.map(([j, l, v]) => `${esc(j)} $${v.toFixed(2)}`).join(" · ")}</div>` : ""}`);
   $("health").innerHTML = out.join("");
@@ -976,7 +1030,8 @@ document.addEventListener("click", async (e) => {
   btn.disabled = false;
 });
 
-function openKey() { $("keyIn").value = ""; $("keyMsg").textContent = key ? "A token is saved." : ""; $("keyDlg").showModal(); }
+function openKey() { $("keyIn").value = ""; $("capIn").value = store.get("cc.cap"); $("keyMsg").textContent = key ? "A token is saved." : ""; $("keyDlg").showModal(); }
+$("capSave").addEventListener("click", () => { const v = parseFloat($("capIn").value); store.set("cc.cap", v > 0 ? String(v) : ""); $("keyMsg").textContent = v > 0 ? "Cap saved." : "Cap cleared."; render(); });
 $("keyBtn").addEventListener("click", openKey);
 $("keyClose").addEventListener("click", () => $("keyDlg").close());
 $("keyClear").addEventListener("click", () => { key = ""; store.set("board.key", ""); $("keyMsg").textContent = "Forgotten."; });
