@@ -423,7 +423,10 @@ function renderLanes(lanes) {
   const shown = lanes.filter((l) => !filter || l.m === filter);
   const rank = {running: 0, between: 0, merging: 1, planning: 1, limit: 2, waiting: 3, paused: 4, stopped: 5};
   shown.sort((a, b) => (a.stale - b.stale) || ((rank[laneState(a)] ?? 9) - (rank[laneState(b)] ?? 9)) || a.lane.localeCompare(b.lane));
-  const active = shown.filter((l) => l.alive && !l.stale), quiet = shown.filter((l) => !(l.alive && !l.stale));
+  // the feed keeps a lane up to four days while it holds something for Cody; the board shows the last 12 hours
+  const lastMoved = (l) => Math.max(0, l.commit?.[0] || 0, ...(l.events || []).map((e) => e[0]));
+  const active = shown.filter((l) => l.alive && !l.stale);
+  const quiet = shown.filter((l) => !(l.alive && !l.stale) && now() - lastMoved(l) < 12 * 3600);
   $("lanes").innerHTML = active.length ? active.map(card).join("") : '<p class="card empty">No lanes running right now.</p>';
   $("quiet").innerHTML = quiet.length ? `<details><summary>Stopped in the last 12 hours (${quiet.length})</summary><div class="grid">${quiet.map(card).join("")}</div></details>` : "";
 
