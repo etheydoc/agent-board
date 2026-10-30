@@ -376,7 +376,7 @@ function renderMachines(lanes) {
     const status = stale ? `<span class="bad">offline · ${ago(d.at)}</span>` : live.length ? `${live.length} lane${live.length > 1 ? "s" : ""} running` : "idle";
     const lines = live.map((l) => {
       const s = laneState(l), j = l.job;
-      const what = s === "running" && j ? `<b>${esc(j.id)}</b> ${esc(j.role || "")} · ${ago(l.since)} — ${esc((j.brief || "").slice(0, 110))}${(j.brief || "").length > 110 ? "…" : ""}`
+      const what = s === "running" && j ? `<b>${esc(j.id)}</b> ${esc(j.role || "")}${l.since ? " · " + ago(l.since) : ""} — ${esc((j.brief || "").slice(0, 110))}${(j.brief || "").length > 110 ? "…" : ""}`
         : `${STATE[s][0]}${l.last ? ": " + esc(l.last.slice(0, 110)) : ""}`;
       return `<div class="mline"><span class="who">${esc(l.lane)}</span><span class="what">${what}</span></div>`;
     }).join("");
