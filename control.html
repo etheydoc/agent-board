@@ -188,10 +188,10 @@ dialog p,dialog li{font-size:14px}
     <button class="btn" id="keyClose">Close</button>
     <span class="hint" id="keyMsg"></span>
   </div>
-  <h3 style="margin-top:16px">Your weekly cap</h3>
-  <p class="hint" style="margin-top:0">In seat dollars (API-equivalent): roughly what the seats had spent over the 7 days before you last hit
-    the weekly limit. Left empty, the page infers it from the next usage-limit stop.</p>
-  <div class="acts"><input id="capIn" type="text" inputmode="decimal" placeholder="e.g. 1200" style="width:140px"><button class="btn" id="capSave">Save cap</button></div>
+  <h3 style="margin-top:16px">Your week</h3>
+  <p class="hint" style="margin-top:0">The weekly % from Claude's usage card (Settings → Usage, or <code>/usage</code>). Orchestrators update it each
+    round; type it here when it looks off. The reset time carries over from the last reading.</p>
+  <div class="acts"><input id="capIn" type="text" inputmode="decimal" placeholder="% used" style="width:110px"><button class="btn" id="capSave">Save</button></div>
   <p class="hint">Phone pushes even with this page closed: put an <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a>
     topic name in <code>~/.config/agent-board/ntfy</code> on PC 1 and subscribe to it in the ntfy app.</p>
 </dialog>
@@ -258,7 +258,7 @@ async function gistFiles(id) {
   }
   if (r.status === 403 || r.status === 429) {  // rate-limited: the raw links still answer
     const files = {};
-    const names = [...MACHINES.map(([k]) => k + ".json"), ...(id === BOARD ? [] : ["answers.json", ...CONTROL_MACHINES.map((k) => `img-${k}.json`)])];
+    const names = [...MACHINES.map(([k]) => k + ".json"), ...(id === BOARD ? [] : ["answers.json", "calib.json", ...CONTROL_MACHINES.map((k) => `img-${k}.json`)])];
     await Promise.all(names.map(async (n) => {
       const f = await fetch(`https://gist.githubusercontent.com/${OWNER}/${id}/raw/${n}?t=${Date.now()}`);
       if (f.ok) files[n] = await f.text();
@@ -277,6 +277,7 @@ async function load() {
     for (const [n, t] of Object.entries(b)) { const d = parse(t); if (d && d.lanes) nb[d.machine || n.slice(0, -5)] = d; }
     for (const [n, t] of Object.entries(c)) {
       if (n === "answers.json") answers = parse(t, []) || [];
+      else if (n === "calib.json") pageCalib = parse(t, null);
       else if (n.startsWith("img-")) Object.assign(ni, parse(t, {}));
       else if (n.endsWith(".json")) { const d = parse(t); if (d && d.machine) nc[d.machine] = d; }
     }
@@ -499,7 +500,13 @@ function build() {
     if (down.length && w.refs.lanes.length) issues.push({sev: "warn", who: "lead", text: `${w.j[1]} (${w.l.lane}) waits on ${down.join(", ")}, which ${down.length > 1 ? "aren't" : "isn't"} running on any machine that reports.`,
       fix: known.length < MACHINES.length ? "It may run on a machine that isn't reporting." : "Nothing will free it until an orchestrator schedules that work."});
   }
-  return {lanes, sessions, state, stateM, todo: open, sent, issues, waits, taken, latest, t0};
+  // who each parked job is waiting on, so "parked" never reads as "needs Cody" unless it does
+  const parkedWho = new Map();
+  for (const p of onCody) parkedWho.set(p.j[1], ["you", `waits on your ${p.refs.jobs.length ? "look at " + p.refs.jobs.join(", ") : "call"}`]);
+  for (const p of checkParked) parkedWho.set(p.j[1], ["lead", "failed its check: the lead's to re-brief"]);
+  for (const w of waits) parkedWho.set(w.j[1], w.refs.lanes.length || w.refs.jobs.length
+    ? ["agents", "waits on " + [...w.refs.lanes, ...w.refs.jobs].join(", ")] : ["backlog", "held by hand: backlog until re-planned"]);
+  return {lanes, sessions, state, stateM, todo: open, sent, issues, waits, taken, latest, t0, parkedWho};
 }
 
 function setupFix(k) {  // [who runs it and where, the command]
@@ -551,7 +558,7 @@ function renderTop(block, working) {
   if (mins) parts.push(`~${mins} min of yours`);
   parts.push(`${working} agent${working === 1 ? "" : "s"} working`);
   const w = week();
-  if (w.cap) parts.push(`<span class="${w.pct > 0.85 ? "bad" : ""}">week ${Math.round(100 * w.pct)}% used</span>`);
+  if (w.ok) parts.push(`<span class="${w.pct > 85 || (w.hitAt && w.hitAt < w.resets) ? "bad" : ""}">week ${fmtPct(w.pct)} used</span>`);
   const nx = nextEvent();
   const where = (M.state?.where || "").match(/[^.]+\./g) || [];  // whole sentences, up to ~200 characters
   let ws = "";
@@ -711,21 +718,27 @@ function actions(x) {
 }
 
 // ---- weekly usage, the real limit ----
+// The Max plan bills nothing; what runs out is the weekly limit. Seat runs report an API-price figure, used here only
+// as a weight: a real reading of the week (the Claude app's usage card, kept in calib) says how much of that weight 1%
+// of the week is, so every seat run, lane and change can be shown as a share of the week.
+const WEEK = 7 * 86400;
+let pageCalib = null;  // a reading Cody typed in, kept in the control gist's calib.json
+const fmtPct = (p) => (p < 1 ? p.toFixed(1) : String(Math.round(p))) + "%";
 function week() {
   const spend = Object.values(ctl).flatMap((c) => c.spend || []);
-  const hits = Object.values(ctl).flatMap((c) => c.limits || []).sort((a, b) => a - b);
-  const t = now(), sum = (f) => spend.filter(([e]) => f(e)).reduce((n, [, usd]) => n + usd, 0);
-  const used = sum((e) => e > t - 7 * 86400), day = sum((e) => e > t - 86400);
-  let cap = +store.get("cc.cap") || 0, capFrom = cap ? "the cap you set" : "";
-  if (!cap && hits.length) {  // what the seats had spent in the week before the latest stop on the limit
-    const h = hits[hits.length - 1];
-    cap = sum((e) => e > h - 7 * 86400 && e <= h);
-    capFrom = "inferred from the usage-limit stop " + ago(h);
-  }
-  const left = cap ? (cap - used) / Math.max(day / 86400, 1e-6) : 0;
-  return {used, day, cap, capFrom, pct: cap ? used / cap : 0, hitAt: cap && day ? t + left : 0};
+  const t = now(), between = (a, b) => spend.filter(([e]) => e > a && e <= b).reduce((n, [, w]) => n + w, 0);
+  const cal = [...Object.values(ctl).map((c) => c.calib), pageCalib].filter((c) => c && c.pct > 0 && c.resets).sort((a, b) => b.at - a.at)[0];
+  const unit = cal ? between(cal.resets - WEEK, cal.at) / cal.pct : 0;  // seat weight per 1% of the week
+  if (!(unit > 0)) return {ok: false};
+  let resets = cal.resets;
+  while (resets < t) resets += WEEK;
+  const pct = resets === cal.resets ? cal.pct + between(cal.at, t) / unit : between(resets - WEEK, t) / unit;
+  const span = Math.max(6 * 3600, Math.min(86400, t - (resets - WEEK)));  // pace from this week's runs only
+  const dayPct = between(t - span, t) / unit * 86400 / span;
+  return {ok: true, unit, pct, dayPct, resets, cal, hitAt: dayPct > 0 ? t + (100 - pct) / dayPct * 86400 : 0};
 }
-const pctOf = (usd) => { const w = week(); return w.cap ? ` ≈ ${(100 * usd / w.cap).toFixed(usd / w.cap < 0.01 ? 1 : 0)}% of your week` : ""; };
+const pctOf = (w8) => { const w = week(); return w.ok ? fmtPct(w8 / w.unit) + " of your week" : "an unknown share of your week"; };
+const when = (t) => new Date(t * 1000).toLocaleString([], {weekday: "short", hour: "numeric", minute: "2-digit"});
 
 // what a change costs: the lane's own jobs of that role (else the role's anywhere), merged per job
 function jobCosts(l, roles) {
@@ -749,8 +762,18 @@ function changeCost(x) {
   out.push(rides.length ? `<b>Cheapest:</b> your note goes into ${rides.join(", ").replace(/, ([^,]*)$/, " and $1")}, which run anyway, so a change they can make in passing costs little extra.`
     : x.l.live || x.l.queued ? `<b>Cheapest:</b> your note rides on ${esc(x.l.lane)}'s next job, which runs anyway.`
     : `${esc(x.l.lane)} has nothing queued, so a change means a new pass that the lead schedules.`);
-  if (c) out.push(`<b>A pass of its own</b> (a rework of finished pieces): a ${esc(c.where)} job costs ~$${c.med.toFixed(0)}${pctOf(c.med)} (typical of ${c.n}; cheapest $${c.min.toFixed(0)}).`);
-  return `<div class="mem" style="margin-top:8px">${out.map((s) => `<p>${s}</p>`).join("")}<p class="hint">Seat runs only, API-equivalent dollars.${week().cap ? "" : " Set your weekly cap under 🔑 to see this as a share of your week."}</p></div>`;
+  const w = week();
+  if (c && w.ok) out.push(`<b>A pass of its own</b> (a rework of finished pieces): a ${esc(c.where)} job uses ~${fmtPct(c.med / w.unit)} of your week (typical of ${c.n}; the lightest ${fmtPct(c.min / w.unit)}). You have ${fmtPct(Math.max(0, 100 - w.pct))} left until ${when(w.resets)}.`);
+  else if (c) out.push(`<b>A pass of its own</b> costs about one ${esc(c.where)} job. Enter your weekly usage under 🔑 to see it as a share of your week.`);
+  return `<div class="mem" style="margin-top:8px">${out.map((s) => `<p>${s}</p>`).join("")}</div>`;
+}
+
+// a lane's parked jobs, counted by who they wait on: only "on you" is Cody's
+const WHO = {you: ["on you", "hot"], agents: ["on other lanes", ""], lead: ["on the lead", ""], backlog: ["backlog", ""]};
+function parkedChips(l) {
+  const n = {};
+  for (const j of (l.jobs || []).filter((x) => x[0] === "!")) { const w = M.parkedWho.get(j[1])?.[0] || "backlog"; n[w] = (n[w] || 0) + 1; }
+  return Object.entries(n).map(([w, k]) => `<span class="chip ${WHO[w][1]}">${k} parked, waiting ${WHO[w][0]}</span>`).join("");
 }
 
 // buttons to every job a piece of text names: to its to-do card if one covers it, else to its lane's card
@@ -802,7 +825,8 @@ function renderNow() {
     const chips = [];
     if (l.dependents.length) chips.push(`<span class="chip hot">${uniq(l.dependents).length} job${uniq(l.dependents).length > 1 ? "s" : ""} elsewhere wait on this</span>`);
     if (l.left) chips.push(`<span class="chip">~${dur(l.left)} of work left · done ~${clock(l.endAt)}</span>`);
-    chips.push(`<span class="chip">${l.done}/${l.total} done${l.queued ? ` · ${l.queued} queued` : ""}${l.parked ? ` · ${l.parked} parked` : ""}</span>`);
+    chips.push(`<span class="chip">${l.done}/${l.total} done${l.queued ? ` · ${l.queued} queued` : ""}</span>`);
+    chips.push(parkedChips(l));
     rows.push(`<div class="row" style="--c:${color(l.m)}"><span class="tag">${esc(l.lane)}</span><div class="main">
       <div class="l1"><b>${esc(plain(l))}</b><span class="pill${live ? " live" : ""}" style="--s:var(${svar})"><i></i>${esc(stText)}</span><span class="hint">${esc(label(l.m))}</span></div>
       <div class="l2">${j && st !== "limit" ? `<b>${esc(j.id)}</b> ${esc(first(j.brief, 140))}` : esc(l.last || "")}</div>
@@ -874,27 +898,31 @@ function renderHealth() {
     <div class="who">${i.who === "you" ? "Needs you" : i.who === "auto" ? "Sorts itself out" : "For the lead"}</div><div>${esc(i.text)}</div>
     ${i.fix ? `<div class="hint">${esc(i.fix)}</div>` : ""}${i.pre ? `<details class="more"><summary>Details</summary><pre>${esc(i.pre)}</pre></details>` : ""}</div></div>`).join("")
     : '<div class="ok" style="padding:4px 0">No problems found: every reporting lane is moving, and no round is failing.</div>');
-  // spend: seat runs only (claude -p reports API-equivalent dollars); Cody's own sessions aren't counted
+  // the week: the real limit. Seat runs are weighted by their API-price figure (nothing is billed on the Max plan)
+  const w = week();
+  const share = (x) => w.ok ? fmtPct(x / w.unit) : "";
   const mid = new Date(); mid.setHours(0, 0, 0, 0);
-  const t0 = mid.getTime() / 1000, day = M.t0 - 86400;
+  const t0 = mid.getTime() / 1000;
   const rows = {};
-  let today = 0, last24 = 0;
+  let today = 0;
   const jobsToday = [];
-  for (const [m, c] of Object.entries(ctl)) for (const [lane, runs] of Object.entries(c.cost || {})) for (const [job, end, usd] of runs) {
-    if (end >= day) last24 += usd;
+  for (const [m, c] of Object.entries(ctl)) for (const [lane, runs] of Object.entries(c.cost || {})) for (const [job, end, w8] of runs) {
     if (end < t0) continue;
-    today += usd; rows[lane] = (rows[lane] || 0) + usd; jobsToday.push([job, lane, usd]);
+    today += w8; rows[lane] = (rows[lane] || 0) + w8; jobsToday.push([job, lane, w8]);
   }
   const top = jobsToday.sort((a, b) => b[2] - a[2]).slice(0, 3);
-  const max = Math.max(1, ...Object.values(rows));
-  const w = week();
-  out.push(`<h3>Your weekly usage</h3><div class="l2">${w.cap ? `<b>${Math.round(100 * w.pct)}%</b> of your week used by seats ($${w.used.toFixed(0)} of ~$${w.cap.toFixed(0)}, ${esc(w.capFrom)}).
-      ${w.hitAt ? ` At the last 24 hours' pace ($${w.day.toFixed(0)}/day) you reach the limit <b class="${w.hitAt - M.t0 < 2 * 86400 ? "bad" : ""}">${w.hitAt - M.t0 < 7 * 86400 ? "~" + new Date(w.hitAt * 1000).toLocaleString([], {weekday: "short", hour: "numeric"}) : "not this week"}</b>.` : ""}
-      <div class="bar"><div class="track" style="max-width:none"><span class="${w.pct > 0.85 ? "over" : "d"}" style="--c:var(--merge);width:${Math.min(100, 100 * w.pct).toFixed(0)}%"></span></div></div>`
-    : `Seats used <b>$${w.used.toFixed(0)}</b> in the last 7 days ($${w.day.toFixed(0)} in the last 24 hours). <span class="hint">No usage-limit stop is on record to set your cap from: set it once under 🔑 to see this as a share of your week.</span>`}</div>
-    <h3>Spend</h3><div class="l2"><b>$${today.toFixed(0)}</b> today · $${last24.toFixed(0)} in the last 24 hours <span class="hint">(seat runs, API-equivalent; your own sessions aren't counted)</span></div>
-    ${Object.keys(rows).length ? `<table class="spend">${Object.entries(rows).sort((a, b) => b[1] - a[1]).map(([lane, v]) => `<tr><td>${esc(lane)}</td><td style="width:60%"><div class="track" style="max-width:none"><span class="d" style="--c:var(--merge);width:${(100 * v / max).toFixed(0)}%"></span></div></td><td class="v">$${v.toFixed(2)}</td></tr>`).join("")}</table>
-    <div class="hint">Most today: ${top.map(([j, l, v]) => `${esc(j)} $${v.toFixed(2)}`).join(" · ")}</div>` : ""}`);
+  const max = Math.max(1e-6, ...Object.values(rows));
+  if (!w.ok) out.push(`<h3>Your week</h3><div class="l2">Enter your weekly usage once under 🔑 (from Claude's usage card) to see the seats' use as a share of your week.</div>`);
+  else {
+    const before = w.hitAt && w.hitAt < w.resets;
+    out.push(`<h3>Your week</h3><div class="l2"><b>${fmtPct(w.pct)}</b> used; it resets ${when(w.resets)}.
+      ${w.dayPct ? `The seats are using ${fmtPct(w.dayPct)} a day: at that pace you ${before ? `<b class="bad">reach the limit ~${when(w.hitAt)}</b>, before the reset` : `don't reach the limit before the reset`}.` : ""}
+      <div class="bar"><div class="track" style="max-width:none"><span class="${w.pct > 85 || before ? "over" : "d"}" style="--c:var(--merge);width:${Math.min(100, w.pct).toFixed(0)}%"></span></div></div>
+      <div class="hint">From Claude's usage card (${fmtPct(w.cal.pct)}, ${ago(w.cal.at)}) plus the seats' runs since; your own sessions since then aren't counted. Update it under 🔑.</div></div>`);
+  }
+  if (Object.keys(rows).length) out.push(`<h3>Today, by lane</h3><div class="l2">The seats used <b>${share(today) || "?"}</b> of your week today.</div>
+    <table class="spend">${Object.entries(rows).sort((a, b) => b[1] - a[1]).map(([lane, v]) => `<tr><td>${esc(lane)}</td><td style="width:60%"><div class="track" style="max-width:none"><span class="d" style="--c:var(--merge);width:${(100 * v / max).toFixed(0)}%"></span></div></td><td class="v">${share(v)}</td></tr>`).join("")}</table>
+    <div class="hint">Heaviest jobs today: ${top.map(([j, l, v]) => `${esc(j)} ${share(v)}`).join(" · ")}</div>`);
   $("health").innerHTML = out.join("");
 }
 
@@ -925,7 +953,9 @@ function card(l) {
     const cur = j && id === j.id && l.live;
     const k = s === "x" ? "✓" : s === "!" ? "⚠" : cur ? "●" : "○";
     const why = s === "!" ? l.why?.[id] || "" : "";
-    return `<li><span class="k">${k}</span><span><b>${esc(id)}</b> <span class="jmeta">${esc(role)} · ${esc(effort)}</span><br><span class="brief clamp">${esc(brief)}</span>
+    const who = s === "!" ? M.parkedWho.get(id) : null;
+    return `<li><span class="k">${k}</span><span><b>${esc(id)}</b> <span class="jmeta">${esc(role)} · ${esc(effort)}</span>
+      ${who ? ` <span class="chip ${who[0] === "you" ? "hot" : ""}">${esc(who[1])}</span>` : ""}<br><span class="brief clamp">${esc(brief)}</span>
       ${why ? `<pre>${esc(why)}</pre>${jumps(why.replace(new RegExp("\\b" + id + "\\b", "g"), ""))}` : ""}</span></li>`;
   };
   const jobs = l.jobs || [];
@@ -938,7 +968,8 @@ function card(l) {
     ${j && l.live ? `<div class="l2" style="margin-top:6px"><b>${esc(j.id)}</b> <span class="jmeta">${esc([j.role, j.effort].filter(Boolean).join(" · "))}${l.since && !j.finished ? " · for " + dur(M.t0 - l.since) : ""}</span>
       ${j.brief ? `<div class="brief clamp">${esc(j.brief)}</div>` : ""}</div>` : ""}
     ${l.last ? `<pre style="margin-top:6px">${esc(l.last)}</pre>` : ""}
-    <div class="hint">${l.done}/${l.total} done${l.parked ? ` · <span class="bad">${l.parked} parked</span>` : ""}${l.commit ? " · last commit " + ago(l.commit[0]) : ""}</div>
+    <div class="hint">${l.done}/${l.total} done${l.commit ? " · last commit " + ago(l.commit[0]) : ""}</div>
+    ${l.parked ? `<div class="chips">${parkedChips(l)}</div>` : ""}
     ${next.length ? `<details class="more"${l.live ? " open" : ""}><summary>Up next (${next.length})</summary><ol class="jobs">${next.map(row).join("")}</ol></details>` : ""}
     ${done.length ? `<details class="more"><summary>Done and parked (${done.length})</summary><ol class="jobs">${done.map(row).join("")}</ol></details>` : ""}
     ${events ? `<details class="more"><summary>Messages</summary><ol class="jobs">${events}</ol></details>` : ""}
@@ -1030,8 +1061,21 @@ document.addEventListener("click", async (e) => {
   btn.disabled = false;
 });
 
-function openKey() { $("keyIn").value = ""; $("capIn").value = store.get("cc.cap"); $("keyMsg").textContent = key ? "A token is saved." : ""; $("keyDlg").showModal(); }
-$("capSave").addEventListener("click", () => { const v = parseFloat($("capIn").value); store.set("cc.cap", v > 0 ? String(v) : ""); $("keyMsg").textContent = v > 0 ? "Cap saved." : "Cap cleared."; render(); });
+function openKey() { $("keyIn").value = ""; $("capIn").value = ""; $("keyMsg").textContent = key ? "A token is saved." : ""; $("keyDlg").showModal(); }
+$("capSave").addEventListener("click", async () => {  // a fresh reading of the week, into the control gist's calib.json
+  const v = parseFloat($("capIn").value);
+  if (!(v > 0 && v <= 100)) { $("keyMsg").textContent = "Type the % used, 1 to 100."; return; }
+  const prev = [...Object.values(ctl).map((c) => c.calib), pageCalib].filter((c) => c?.resets).sort((a, b) => b.at - a.at)[0];
+  if (!prev) { $("keyMsg").textContent = "No reset time on record yet: the next orchestrator round sets it."; return; }
+  if (!key) { $("keyMsg").textContent = "Save a token first."; return; }
+  let resets = prev.resets;
+  while (resets < now()) resets += WEEK;
+  const cal = {pct: v, at: Math.floor(now()), resets};
+  const w2 = await fetch("https://api.github.com/gists/" + control, {method: "PATCH", headers: {Authorization: "token " + key, Accept: "application/vnd.github+json"},
+    body: JSON.stringify({files: {"calib.json": {content: JSON.stringify(cal)}}})});
+  $("keyMsg").textContent = w2.ok ? "Saved." : "GitHub answered " + w2.status;
+  if (w2.ok) { pageCalib = cal; render(); }
+});
 $("keyBtn").addEventListener("click", openKey);
 $("keyClose").addEventListener("click", () => $("keyDlg").close());
 $("keyClear").addEventListener("click", () => { key = ""; store.set("board.key", ""); $("keyMsg").textContent = "Forgotten."; });
