@@ -666,7 +666,7 @@ function todoBody(x) {
     out.push(`<div><div class="hint"><b>${esc(o.job)}</b> left you:</div>${(o.cody || []).length ? `<ul style="margin:4px 0;padding-left:18px">${o.cody.map((c) => `<li><b>${md(c.ask)}</b>${c.min ? ` <span class="hint">~${c.min} min</span>` : ""}</li>`).join("")}</ul>` : ""}
       ${o.text ? `<div class="calls clamp" title="Tap to read it all">${md(o.text)}</div>` : ""}</div>`);
   }
-  if (x.why) out.push(`<div><div class="hint"><b>Why</b></div><pre>${esc(x.why)}</pre></div>`);
+  if (x.why) out.push(`<div><div class="hint"><b>Why</b></div><pre>${esc(x.why)}</pre>${jumps(x.why)}</div>`);
   if (x.upload) out.push(`<div class="calls">${md(x.upload)}</div><div class="hint">Uploads need your yes (CLAUDE.md). ${x.session ? `<b>${esc(x.session.name)}</b> is waiting for it now: say yes there, or approve here for the lead's next run.` : "Approving here hands it to the lead's next run."}</div>`);
   if (x.fix) out.push(`<div class="hint"><b>Known fix:</b> ${esc(x.fix)}</div>`);
   if (x.tail) out.push(`<details class="more"><summary>Log tail</summary><pre>${esc(x.tail)}</pre></details>`);
@@ -688,12 +688,39 @@ function actions(x) {
     <div class="hint">Nothing is waiting on this. Your answer goes to ${esc(x.lane)}'s next seat and its planner.</div>`;
   const to = x.targets[0]?.lane === "LEAD" ? "the lead" : x.lane;
   if (x.lane && to === "the lead") leadHint = `${esc(x.lane)} has nothing left to run, so this goes to the lead. ` + leadHint;
+  if (x.items && x.reply === "open") {  // a look: the pictures are above, so the answer is a yes or what to change
+    const frees = x.parked?.length ? ` ${x.parked.map((p) => p.j[1]).join(" and ")} go${x.parked.length > 1 ? "" : "es"} back in ${esc(x.lane)}'s queue.` : "";
+    return `<div class="acts"><button class="btn pri" data-quick="${id}" data-text="Approved as is; go ahead.">Looks good: approve</button>
+      <button class="btn" data-reveal="${id}">Change something</button><button class="btn" data-dismiss="${id}">Dismiss</button></div>
+      <div data-noteof="${id}" ${drafts[x.id] ? "" : "hidden"}><textarea data-draft="${id}" placeholder="What to change, e.g. “gable roof, not eave-front; darker rope”">${esc(drafts[x.id] || "")}</textarea>
+      <div class="acts"><button class="btn pri" data-send="${id}">Send to ${esc(to)}</button></div></div>
+      <div class="hint">${to === "the lead" ? leadHint : `Either way, ${esc(x.lane)}'s next seat gets your answer.${frees}`}</div>`;
+  }
   const does = to === "the lead" ? leadHint : x.reply === "open" && x.parked?.length ? `Sending puts ${x.parked.map((p) => p.j[1]).join(", ")} back in ${x.lane}'s queue with your answer, and your answer goes to its next seat.`
     : x.targets.some((t) => t.kind === "parked") ? "Sending puts the job back in its lane's queue with your answer added to its brief." : leadHint;
   return `<textarea data-draft="${id}" placeholder="Your answer or direction…">${esc(drafts[x.id] || "")}</textarea>
     <div class="acts">${x.reply === "open" ? `<button class="btn" data-quick="${id}" data-text="Approved as is; go ahead.">Approve as is</button>` : ""}
     <button class="btn pri" data-send="${id}">Send to ${esc(to)}</button><button class="btn" data-dismiss="${id}">Dismiss</button></div>
     <div class="hint">${does}</div>`;
+}
+
+// buttons to every job a piece of text names: to its to-do card if one covers it, else to its lane's card
+function jumps(text) {
+  const ids = uniq(String(text || "").match(JOBID) || []);
+  return ids.length ? `<div class="acts">${ids.map((id) => `<button class="btn" data-jump="${esc(id)}">Go to ${esc(id)} →</button>`).join("")}</div>` : "";
+}
+function jump(id) {
+  const x = M.todo.find((t) => (t.items || []).some((o) => o.job === id) || (t.jobsShown || []).some((j) => j[1] === id));
+  let el = x && document.querySelector(`[data-todo="${CSS.escape(x.id)}"]`);
+  if (el) el.open = true;
+  else {
+    const lane = id.split("-")[0];
+    el = document.querySelector(`[data-lane="${CSS.escape(lane)}"]`);
+    if (el) { el.closest("details")?.setAttribute("open", ""); el.querySelectorAll("details").forEach((d) => d.open = true); }
+  }
+  if (!el) return;
+  el.scrollIntoView({behavior: "smooth", block: "start"});
+  el.style.outline = "3px solid var(--merge)"; setTimeout(() => el.style.outline = "", 2500);
 }
 
 function sessionLinks(s, big) {
@@ -843,13 +870,15 @@ function card(l) {
   const row = ([s, id, role, effort, brief]) => {
     const cur = j && id === j.id && l.live;
     const k = s === "x" ? "✓" : s === "!" ? "⚠" : cur ? "●" : "○";
-    return `<li><span class="k">${k}</span><span><b>${esc(id)}</b> <span class="jmeta">${esc(role)} · ${esc(effort)}</span><br><span class="brief clamp">${esc(brief)}</span></span></li>`;
+    const why = s === "!" ? l.why?.[id] || "" : "";
+    return `<li><span class="k">${k}</span><span><b>${esc(id)}</b> <span class="jmeta">${esc(role)} · ${esc(effort)}</span><br><span class="brief clamp">${esc(brief)}</span>
+      ${why ? `<pre>${esc(why)}</pre>${jumps(why.replace(new RegExp("\\b" + id + "\\b", "g"), ""))}` : ""}</span></li>`;
   };
   const jobs = l.jobs || [];
   const next = jobs.filter((x) => x[0] === " " && !(j && x[1] === j.id && l.live));
   const done = jobs.filter((x) => x[0] !== " ").reverse();
   const events = (l.events || []).slice().reverse().map(([t, msg]) => `<li><span class="t">${clock(t)}</span><span>${esc(msg)}</span></li>`).join("");
-  return `<section class="card lane" style="--c:${color(l.m)}">
+  return `<section class="card lane" data-lane="${esc(l.lane)}" style="--c:${color(l.m)}">
     <div class="l1"><span class="chip m" style="--c:${color(l.m)}">${esc(l.lane)}</span><b style="flex:1;min-width:0">${esc(plain(l))}</b>
       <span class="pill${live && l.live ? " live" : ""}" style="--s:var(${svar})"><i></i>${esc(l.stale ? "Machine offline" : name)}</span></div>
     ${j && l.live ? `<div class="l2" style="margin-top:6px"><b>${esc(j.id)}</b> <span class="jmeta">${esc([j.role, j.effort].filter(Boolean).join(" · "))}${l.since && !j.finished ? " · for " + dur(M.t0 - l.since) : ""}</span>
@@ -906,6 +935,8 @@ document.addEventListener("toggle", (e) => {
 document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
   if (go) { e.preventDefault(); $(go.dataset.go).scrollIntoView({behavior: "smooth"}); return; }
+  const jb = e.target.closest("[data-jump]");
+  if (jb) { jump(jb.dataset.jump); return; }
   const big = e.target.closest("[data-big]");
   if (big) { $("imgBig").src = imgs[big.dataset.big]; $("imgCap").textContent = big.dataset.big; $("imgDlg").showModal(); return; }
   const cp = e.target.closest(".copy");
